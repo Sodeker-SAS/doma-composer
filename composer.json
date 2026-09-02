@@ -1,0 +1,42 @@
+{
+    "name": "sodeker/laravel-attachments",
+    "description": "Módulo compartido de adjuntos para aplicaciones Laravel de Sódeker.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.13",
+        "orchestra/testbench": "^10.0",
+        "pestphp/pest": "^3.0"
+    },
+    "suggest": {
+        "league/flysystem-aws-s3-v3": "Destinos S3",
+        "league/flysystem-sftp-v3": "Destinos SFTP/NAS"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sodeker\\Attachments\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sodeker\\Attachments\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Sodeker\\Attachments\\AttachmentsServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "sort-packages": true
+    }
+}
