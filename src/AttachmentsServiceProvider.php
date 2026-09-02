@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments;
 
+use Illuminate\Support\ServiceProvider;
 use Sodeker\Attachments\Application\Services\RegisterAttachmentService;
 use Sodeker\Attachments\Application\Services\StoreAttachmentService;
+use Sodeker\Attachments\Contracts\AttachmentRegistryPort;
+use Sodeker\Attachments\Contracts\AttachmentStoragePort;
 use Sodeker\Attachments\Domain\Repositories\AttachmentBlobStorageInterface;
 use Sodeker\Attachments\Domain\Repositories\AttachmentRepositoryInterface;
 use Sodeker\Attachments\Domain\Repositories\ResolvesStorageTenantInterface;
@@ -14,9 +17,6 @@ use Sodeker\Attachments\Infrastructure\Database\Repositories\EloquentAttachmentR
 use Sodeker\Attachments\Infrastructure\Storage\FlysystemAttachmentBlobStorage;
 use Sodeker\Attachments\Infrastructure\Tenancy\LandlordTenantDiskResolver;
 use Sodeker\Attachments\Infrastructure\Tenancy\TenantConnectionStorageTenantResolver;
-use Sodeker\Attachments\Contracts\AttachmentRegistryPort;
-use Sodeker\Attachments\Contracts\AttachmentStoragePort;
-use Illuminate\Support\ServiceProvider;
 
 final class AttachmentsServiceProvider extends ServiceProvider
 {
@@ -24,7 +24,7 @@ final class AttachmentsServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/attachments.php', 'attachments');
 
-        // Contratos Shared → casos de uso. Es lo único que ven los módulos consumidores: uno
+        // Contratos públicos → casos de uso. Es lo único que ven los módulos consumidores: uno
         // escribe los bytes, el otro deja constancia en base de datos.
         $this->app->bind(AttachmentStoragePort::class, StoreAttachmentService::class);
         $this->app->bind(AttachmentRegistryPort::class, RegisterAttachmentService::class);
@@ -53,10 +53,8 @@ final class AttachmentsServiceProvider extends ServiceProvider
         ], 'attachments-config');
 
         $this->publishesMigrations([
-            __DIR__.'/../database/migrations/0001_01_01_000000_create_attachments_table.php.stub'
-                => database_path('migrations/0001_01_01_000000_create_attachments_table.php'),
-            __DIR__.'/../database/migrations/0001_01_01_000001_create_tenant_disks_table.php.stub'
-                => database_path('migrations/0001_01_01_000001_create_tenant_disks_table.php'),
+            __DIR__.'/../database/migrations/0001_01_01_000000_create_attachments_table.php.stub' => database_path('migrations/0001_01_01_000000_create_attachments_table.php'),
+            __DIR__.'/../database/migrations/0001_01_01_000001_create_tenant_disks_table.php.stub' => database_path('migrations/0001_01_01_000001_create_tenant_disks_table.php'),
         ], 'attachments-migrations');
     }
 }

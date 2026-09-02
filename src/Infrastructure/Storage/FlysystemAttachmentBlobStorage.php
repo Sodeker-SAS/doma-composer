@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Infrastructure\Storage;
 
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Sodeker\Attachments\Domain\Exceptions\AttachmentStorageFailedException;
 use Sodeker\Attachments\Domain\Exceptions\UnknownAttachmentDiskException;
 use Sodeker\Attachments\Domain\Repositories\AttachmentBlobStorageInterface;
 use Sodeker\Attachments\Domain\ValueObjects\AttachmentBinary;
 use Sodeker\Attachments\Domain\ValueObjects\AttachmentLocation;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -20,8 +20,8 @@ use Throwable;
  * disco.
  *
  * Sirve igual para el disco local y para S3, porque Flysystem expone la misma interfaz para
- * ambos. El adaptador `league/flysystem-aws-s3-v3` ya está instalado y hay clientes escribiendo
- * en bucket; añadir uno nuevo es:
+ * ambos. La aplicación consumidora debe instalar `league/flysystem-aws-s3-v3` —el paquete solo lo
+ * sugiere en Composer— antes de escribir en un bucket; añadir uno nuevo es:
  *
  *   1. llenar AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_DEFAULT_REGION
  *   2. declarar el bucket en la fila de `tenant_disks` del cliente
