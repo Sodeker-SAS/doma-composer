@@ -931,7 +931,7 @@ $stored = [];</div>
         <div class="flow">
           <div class="flow__step"><div class="flow__step__num">1</div><h4 class="flow__step__title">Instalar adaptador</h4><p class="flow__step__body">Instala en la aplicación consumidora el adaptador opcional del destino; el paquete solo los declara como sugerencias de Composer.</p></div>
           <div class="flow__step"><div class="flow__step__num">2</div><h4 class="flow__step__title">Declarar variables</h4><p class="flow__step__body">Credenciales y host van en secretos de entorno, nunca en landlord.</p></div>
-          <div class="flow__step"><div class="flow__step__num">3</div><h4 class="flow__step__title">Declarar disco</h4><p class="flow__step__body">Agrega un nombre único en <code>filesystems.disks</code>.</p></div>
+          <div class="flow__step"><div class="flow__step__num">3</div><h4 class="flow__step__title">Declarar disco</h4><p class="flow__step__body">Agrega un nombre único en <code>filesystems.disks</code>. <strong>Un disco por destino físico</strong>: dos servidores SFTP distintos son dos bloques con credenciales propias, nunca uno reutilizado.</p></div>
           <div class="flow__step"><div class="flow__step__num">4</div><h4 class="flow__step__title">Asignar tenant</h4><p class="flow__step__body">La fila usa <code>{"disk":"nombre"}</code> y el propósito deseado.</p></div>
           <div class="flow__step"><div class="flow__step__num">5</div><h4 class="flow__step__title">Verificar</h4><p class="flow__step__body">Limpia caché de configuración, carga, lee, revisa <code>storage_location</code> y simula un fallo.</p></div>
         </div>
@@ -971,7 +971,7 @@ $stored = [];</div>
 
         <h3>Modelo mental</h3>
         <div class="card-grid">
-          <article class="card card--accent"><h4 class="card__title">Synology es un disco Laravel</h4><p class="card__body">El módulo no conoce marcas ni protocolos. Conoce el disco <code>nas</code>, cuya definición usa el driver Flysystem <code>sftp</code>.</p></article>
+          <article class="card card--accent"><h4 class="card__title">Synology es un disco Laravel</h4><p class="card__body">El módulo no conoce marcas ni protocolos. Conoce el disco <code>nas</code>, cuya definición usa el driver Flysystem <code>sftp</code>. Cada servidor es un disco distinto: con tres empresas y tres Synology hay tres bloques declarados y tres juegos de credenciales.</p></article>
           <article class="card card--accent"><h4 class="card__title">Landlord asigna el tenant</h4><p class="card__body"><code>tenant_disks.config</code> contiene <code>{"disk":"nas"}</code>. No contiene host, usuario, contraseña ni rutas.</p></article>
           <article class="card card--accent"><h4 class="card__title">La ubicación queda congelada</h4><p class="card__body"><code>fin_attachments.storage_location</code> guarda <code>disk:nas</code>. Las lecturas futuras no vuelven a consultar landlord.</p></article>
           <article class="card card--accent"><h4 class="card__title">No existe URL pública</h4><p class="card__body">El objeto se descarga por el flujo controlado de Laravel. Una clave relativa devuelta por SFTP se descarta para no filtrar la estructura interna.</p></article>
@@ -1010,6 +1010,7 @@ $stored = [];</div>
         </tbody></table></div>
 
         <h3>Variables de entorno</h3>
+        <p>Las de abajo son las del Synology actual, cuyo disco se llama <code>nas</code>. <strong>El prefijo <code>NAS_SFTP_</code> pertenece a ese disco, no al módulo</strong>: un segundo servidor no reutiliza estas variables, declara las suyas con su propio prefijo (<code>NAS_ACME_SFTP_HOST</code>, etc.). Ver <em>Varios Synology a la vez</em>, más abajo.</p>
         <div class="table-wrap"><table class="doc-table"><thead><tr><th>Variable</th><th>Obligatoria</th><th>Default</th><th>Uso exacto</th></tr></thead><tbody>
           <tr><td><code>NAS_SFTP_HOST</code></td><td>Sí</td><td>—</td><td>IP o DNS alcanzable desde el contenedor PHP; no basta con que responda desde el computador del desarrollador.</td></tr>
           <tr><td><code>NAS_SFTP_PORT</code></td><td>No</td><td><code>22</code></td><td>Puerto configurado al habilitar SFTP en DSM.</td></tr>
@@ -1145,8 +1146,43 @@ ruta visible por SFTP:
         </div>
         <p>Después de la sonda, carga un PDF pequeño mediante el flujo real. Confirma que la fila resultante tenga <code>storage_location = 'disk:nas'</code>, que la clave sea relativa y que el archivo pueda descargarse por el endpoint controlado.</p>
 
-        <h3>Cambiar de carpeta o conectar un segundo Synology</h3>
-        <div class="callout callout--danger"><div class="callout__icon">!</div><div><p class="callout__title">Nunca cambies el <code>root</code> de un disco que ya tiene archivos</p><p class="callout__body">Las filas históricas solo guardan <code>disk:nas</code> y una clave relativa. Si <code>nas.root</code> cambia, todas esas claves empiezan a resolverse desde otra carpeta y los adjuntos aparentan haber desaparecido.</p></div></div>
+        <h3>Varios Synology a la vez</h3>
+        <p>Tres empresas con tres servidores propios, cada uno con su host, su cuenta de servicio y su credencial, es el caso normal y no requiere nada especial del módulo. La regla es <strong>un disco declarado por servidor</strong>.</p>
+        <div class="callout callout--warning"><div class="callout__icon">▲</div><div><p class="callout__title">Un juego único de variables <code>NAS_SFTP_*</code> solo sirve para el primer servidor</p><p class="callout__body">Las credenciales viven en la definición del disco, y cada disco necesita las suyas. Al conectar un segundo Synology hay que declarar otro bloque en <code>filesystems.php</code> con variables prefijadas propias, no reutilizar las existentes. La fila del landlord no puede aportar credenciales: solo nombra el disco.</p></div></div>
+        <div class="code-box">// config/filesystems.php · un bloque por servidor
+
+'nas_acme' =&gt; [
+    'driver'     =&gt; 'sftp',
+    'host'       =&gt; env('NAS_ACME_SFTP_HOST'),
+    'port'       =&gt; (int) env('NAS_ACME_SFTP_PORT', 22),
+    'username'   =&gt; env('NAS_ACME_SFTP_USERNAME'),
+    'password'   =&gt; env('NAS_ACME_SFTP_PASSWORD') ?: null,
+    'privateKey' =&gt; env('NAS_ACME_SFTP_PRIVATE_KEY') ?: null,
+    'root'       =&gt; '/adjuntos/ACME',
+    'throw'      =&gt; true,
+],
+
+'nas_beta' =&gt; [
+    'driver'     =&gt; 'sftp',
+    'host'       =&gt; env('NAS_BETA_SFTP_HOST'),
+    'username'   =&gt; env('NAS_BETA_SFTP_USERNAME'),
+    'privateKey' =&gt; env('NAS_BETA_SFTP_PRIVATE_KEY') ?: null,
+    'root'       =&gt; '/documentos',
+    'throw'      =&gt; true,
+],</div>
+        <p>Cada empresa se apunta a su disco con una fila propia en <code>landlord.tenant_disks</code>. Nada más cambia:</p>
+        <div class="table-wrap"><table class="doc-table"><thead><tr><th>Cliente</th><th><code>purpose</code></th><th><code>driver</code></th><th><code>config</code></th><th>Ubicación persistida</th></tr></thead><tbody>
+          <tr><td>Acme</td><td><code>attachments</code></td><td><code>sftp</code></td><td><code>{"disk":"nas_acme"}</code></td><td><code>disk:nas_acme</code></td></tr>
+          <tr><td>Beta</td><td><code>attachments</code></td><td><code>sftp</code></td><td><code>{"disk":"nas_beta"}</code></td><td><code>disk:nas_beta</code></td></tr>
+          <tr><td>Gamma</td><td><code>studies</code></td><td><code>sftp</code></td><td><code>{"disk":"nas_gamma"}</code></td><td><code>disk:nas_gamma</code></td></tr>
+        </tbody></table></div>
+        <p>El módulo no se entera de cuántos servidores hay. <code>FlysystemAttachmentBlobStorage::configFor()</code> copia <em>entera</em> la definición del disco nombrado, así que un cuarto cliente por FTP o un quinto en S3 con endpoint propio entran por el mismo camino sin tocar una línea del paquete.</p>
+        <div class="callout"><div class="callout__icon">●</div><div><p class="callout__title">Contraste con S3</p><p class="callout__body">En S3 sí basta un juego de credenciales para muchos clientes, porque lo que cambia entre ellos es el bucket y ese sí viaja en la fila como <code>{"bucket":"…"}</code>. En SFTP cambia el servidor entero —host, usuario y clave—, y eso nunca sale de la base de datos.</p></div></div>
+        <div class="callout callout--warning"><div class="callout__icon">▲</div><div><p class="callout__title">Dar de alta un cliente con NAS propio exige despliegue</p><p class="callout__body">No es un <code>INSERT</code>. Hay que declarar el disco en <code>filesystems.php</code>, añadir sus variables al entorno y desplegar; solo entonces la fila del landlord tiene sentido. Es deliberado: la base del landlord no almacena secretos. Si algún día molesta, la salida es un gestor de secretos externo referenciado desde la fila, nunca credenciales en la tabla.</p></div></div>
+
+        <h3>Cambiar de carpeta o mover un cliente de servidor</h3>
+        <p>Distinto del caso anterior: aquí no se suma un servidor, se <strong>reemplaza</strong> el destino de un cliente que ya tiene archivos escritos.</p>
+        <div class="callout callout--danger"><div class="callout__icon">!</div><div><p class="callout__title">Nunca cambies el <code>root</code> de un disco que ya tiene archivos</p><p class="callout__body">Las filas históricas solo guardan <code>disk:nas</code> y una clave relativa. Si <code>nas.root</code> cambia, todas esas claves empiezan a resolverse desde otra carpeta y los adjuntos aparentan haber desaparecido. Ocurre en silencio: no hay error de configuración que delate la causa. El <code>root</code> es identidad del disco, como el nombre del bucket en S3, no una credencial rotatoria.</p></div></div>
         <div class="flow">
           <div class="flow__step"><div class="flow__step__num">1</div><h4 class="flow__step__title">Crear disco nuevo</h4><p class="flow__step__body">Declara <code>nas_v2</code> con su propio host, credenciales y root.</p></div>
           <div class="flow__step"><div class="flow__step__num">2</div><h4 class="flow__step__title">Cambiar landlord</h4><p class="flow__step__body">Actualiza <code>config.disk</code> a <code>nas_v2</code>. Solo las cargas posteriores guardarán <code>disk:nas_v2</code>.</p></div>

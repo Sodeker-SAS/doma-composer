@@ -9,9 +9,11 @@ Declara este repositorio como VCS o como repositorio Composer de tipo `path` dur
 ```bash
 composer require sodeker/laravel-attachments
 php artisan vendor:publish --tag=attachments-config
-php artisan vendor:publish --tag=attachments-migrations
-php artisan migrate
 ```
+
+El paquete **no publica migraciones**. Cada aplicación crea su tabla de adjuntos con sus propias
+migraciones, usando el prefijo de su esquema. La estructura esperada está documentada, sin ser
+ejecutable, en [`database/schema/`](database/schema/).
 
 Laravel descubre `Sodeker\Attachments\AttachmentsServiceProvider` automáticamente.
 
@@ -26,9 +28,13 @@ ATTACHMENTS_CONNECTION=tenant
 ATTACHMENTS_DISK=public
 ```
 
-Estas tres variables son identidad persistente de la integración. Cambiar `ATTACHMENTS_APP_PREFIX` o `ATTACHMENTS_TABLE` cuando ya existen datos deja inalcanzables los adjuntos históricos hasta migrar objetos y registros o restaurar los valores anteriores; cambiar `ATTACHMENTS_CONNECTION` exige mover o exponer la tabla en la nueva conexión.
+Estas variables son identidad persistente de la integración y se eligen una sola vez, al instalar.
 
-La migración de `tenant_disks` usa la conexión `landlord`. Una aplicación que ya administra esa tabla puede publicar solo la configuración o descartar ese stub.
+`ATTACHMENTS_TABLE` y `ATTACHMENTS_CONNECTION` son las críticas: si apuntan a una tabla o una conexión distintas de las reales, los registros existentes no están y los adjuntos desaparecen de la aplicación aunque los archivos sigan en disco.
+
+`ATTACHMENTS_APP_PREFIX` es menos grave de lo que parece: la clave de cada adjunto se persiste en su fila y la lectura usa esa clave, no un recálculo, así que cambiarlo **no deja inaccesible lo ya escrito** — solo parte el almacenamiento en dos raíces y desordena lo que venga después.
+
+`tenant_disks` vive en la conexión `landlord` y el paquete **solo la lee**: no hay modelo, ni escritura, ni comando para administrarla. Crear y mantener sus filas es responsabilidad de la aplicación o de operación. Su estructura también está en [`database/schema/`](database/schema/).
 
 ## Tenancy y almacenamiento
 
@@ -42,6 +48,15 @@ Los destinos S3 requieren `league/flysystem-aws-s3-v3`; los destinos SFTP o NAS 
 - `Sodeker\Attachments\Contracts\AttachmentRegistryPort`: registra, consulta y da de baja lógica la ficha del adjunto.
 
 La arquitectura, el modelo de datos, los ejemplos de consumo y la operación de S3/Synology están en la [guía extensa](documentation/documentation-modulo-adjuntos.html).
+
+## Documentación del paquete
+
+| Archivo | Para qué |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Cómo consumir el módulo desde un módulo de negocio: contratos, los tres flujos con el ejemplo de Estudios, checklist y antipatrones. Escrito para que lo siga un agente de IA. |
+| [`documentation/variables-entorno.md`](documentation/variables-entorno.md) | Las cuatro variables del paquete, qué hace cada una y qué infraestructura espera de la aplicación. Incluye el patrón de varios servidores SFTP. |
+| [`CHANGELOG.md`](CHANGELOG.md) | Qué cambió en cada versión y **qué acción manual exige actualizar**. Léelo antes de cada `composer update`. |
+| [`documentation/`](documentation/documentation-modulo-adjuntos.html) | Guía extensa: arquitectura, modelo de datos y operación. |
 
 ## Desarrollo
 

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Concerns;
 
-use Sodeker\Attachments\Domain\ValueObjects\StoredAttachment;
 use Sodeker\Attachments\Contracts\AttachmentStoragePort;
+use Sodeker\Attachments\Domain\ValueObjects\StoredAttachment;
 use Throwable;
 
 /**

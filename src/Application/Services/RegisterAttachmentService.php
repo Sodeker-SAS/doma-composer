@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Application\Services;
 
+use Illuminate\Support\Str;
+use Sodeker\Attachments\Contracts\AttachmentRegistryPort;
 use Sodeker\Attachments\Domain\Entities\Attachment;
 use Sodeker\Attachments\Domain\Repositories\AttachmentRepositoryInterface;
 use Sodeker\Attachments\Domain\ValueObjects\StoredAttachment;
-use Sodeker\Attachments\Contracts\AttachmentRegistryPort;
-use Illuminate\Support\Str;
 
 /**
  * Caso de uso: dejar constancia de un adjunto ya escrito en el almacenamiento.

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Infrastructure\Tenancy;
 
-use Sodeker\Attachments\Domain\Repositories\ResolvesTenantDiskInterface;
-use Sodeker\Attachments\Domain\ValueObjects\AttachmentLocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use Sodeker\Attachments\Domain\Repositories\ResolvesTenantDiskInterface;
+use Sodeker\Attachments\Domain\ValueObjects\AttachmentLocation;
 use Throwable;
 
 /**

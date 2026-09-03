@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Infrastructure\Http;
 
-use Sodeker\Attachments\Domain\ValueObjects\AttachmentBinary;
 use Illuminate\Http\UploadedFile;
 use RuntimeException;
+use Sodeker\Attachments\Domain\ValueObjects\AttachmentBinary;
 
 /**
  * Traduce un archivo recibido por HTTP al objeto neutro que entiende el módulo.

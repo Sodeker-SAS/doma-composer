@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Infrastructure\Database\Repositories;
 
+use DateTimeImmutable;
 use Sodeker\Attachments\Domain\Entities\Attachment as AttachmentEntity;
 use Sodeker\Attachments\Domain\Repositories\AttachmentRepositoryInterface;
 use Sodeker\Attachments\Infrastructure\Database\Models\Attachment as AttachmentModel;
-use DateTimeImmutable;
 
 final class EloquentAttachmentRepository implements AttachmentRepositoryInterface
 {

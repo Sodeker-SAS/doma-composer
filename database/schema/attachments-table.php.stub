@@ -1,0 +1,66 @@
+<?php
+
+/*
+|--------------------------------------------------------------------------
+| REFERENCIA DE ESQUEMA · NO ES UNA MIGRACIÓN EJECUTABLE
+|--------------------------------------------------------------------------
+|
+| Este archivo documenta la estructura que el paquete espera encontrar en la
+| tabla de adjuntos. NO se publica, NO se ejecuta y NO lo recoge `migrate`:
+| el provider no lo expone con `publishesMigrations()` y la extensión `.stub`
+| lo mantiene fuera del alcance de Laravel.
+|
+| POR QUÉ NO SE EJECUTA: las aplicaciones que consumen este paquete ya tienen
+| su tabla de adjuntos creada por sus propias migraciones, con el prefijo de
+| su esquema (`fin_attachments`, `sat_attachments`). Publicar una migración
+| desde el paquete intentaría crear una tabla existente y fallaría.
+|
+| PARA QUÉ SIRVE ENTONCES:
+|
+|   - Al integrar el paquete en una aplicación NUEVA: copia este contenido a
+|     una migración propia, ajusta el nombre de la tabla y ejecútala.
+|   - Al integrarlo en una aplicación EXISTENTE: compara tu tabla con esta
+|     estructura y añade lo que falte.
+|
+| CONTRATO REAL: lo que el paquete necesita son estas columnas con estos
+| tipos. El nombre de la tabla y la conexión son libres, y se declaran con
+| `ATTACHMENTS_TABLE` y `ATTACHMENTS_CONNECTION`.
+|
+| NOTA SOBRE `url`: la columna guarda la CLAVE de almacenamiento (la ruta
+| dentro del disco), nunca un enlace. El nombre es histórico y se conserva
+| por compatibilidad con los datos existentes.
+|
+*/
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::connection((string) config('attachments.connection', 'tenant'))
+            ->create((string) config('attachments.table', 'attachments'), function (Blueprint $table): void {
+                $table->id();
+                $table->char('uuid', 26)->unique();
+                $table->string('name');
+                $table->string('storage_location', 120)->nullable();
+                // La CLAVE dentro del destino, no una URL. Ver la nota de la cabecera.
+                $table->text('url');
+                $table->string('extension', 20);
+                $table->bigInteger('size');
+                $table->char('status', 1)->default('1');
+                $table->char('created_by', 26);
+                $table->char('updated_by', 26);
+                $table->timestamps();
+                $table->softDeletes();
+            });
+    }
+
+    public function down(): void
+    {
+        Schema::connection((string) config('attachments.connection', 'tenant'))
+            ->dropIfExists((string) config('attachments.table', 'attachments'));
+    }
+};

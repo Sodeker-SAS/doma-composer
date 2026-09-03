@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Sodeker\Attachments\Infrastructure\Tenancy;
 
-use Sodeker\Attachments\Domain\Repositories\ResolvesStorageTenantInterface;
 use RuntimeException;
+use Sodeker\Attachments\Domain\Repositories\ResolvesStorageTenantInterface;
 
 /**
  * Resuelve el tenant a partir del nombre de la base de datos que quedó apuntada en la conexión

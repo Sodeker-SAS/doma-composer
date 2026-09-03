@@ -52,9 +52,14 @@ final class AttachmentsServiceProvider extends ServiceProvider
             __DIR__.'/../config/attachments.php' => config_path('attachments.php'),
         ], 'attachments-config');
 
-        $this->publishesMigrations([
-            __DIR__.'/../database/migrations/0001_01_01_000000_create_attachments_table.php.stub' => database_path('migrations/0001_01_01_000000_create_attachments_table.php'),
-            __DIR__.'/../database/migrations/0001_01_01_000001_create_tenant_disks_table.php.stub' => database_path('migrations/0001_01_01_000001_create_tenant_disks_table.php'),
-        ], 'attachments-migrations');
+        // EL PAQUETE NO PUBLICA MIGRACIONES, A PROPÓSITO. Cada aplicación consumidora ya tiene
+        // su tabla de adjuntos creada por sus propias migraciones y con el prefijo de su esquema
+        // (`fin_attachments`, `sat_attachments`), y `tenant_disks` vive en la base del landlord,
+        // que es infraestructura compartida del despliegue y no propiedad de este módulo.
+        // Publicar migraciones desde aquí chocaría con tablas existentes.
+        //
+        // La estructura que el paquete ESPERA encontrar está documentada, sin ser ejecutable, en
+        // `database/schema/`. Al integrar el paquete en una aplicación nueva se copia desde ahí
+        // a una migración propia; en una existente, sirve para comparar.
     }
 }

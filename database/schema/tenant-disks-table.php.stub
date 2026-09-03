@@ -1,0 +1,90 @@
+<?php
+
+/*
+|--------------------------------------------------------------------------
+| REFERENCIA DE ESQUEMA · NO ES UNA MIGRACIÓN EJECUTABLE
+|--------------------------------------------------------------------------
+|
+| Documenta la estructura de `landlord.tenant_disks`, la tabla donde se
+| ASIGNA a cada cliente su destino de almacenamiento. NO se publica y NO se
+| ejecuta: el provider no la expone con `publishesMigrations()`.
+|
+| POR QUÉ NO SE EJECUTA: esta tabla vive en la base del landlord, que es
+| infraestructura compartida del despliegue y no propiedad del módulo de
+| adjuntos. Las aplicaciones que ya la administran la crearon por su cuenta
+| —FINTEGRA, por ejemplo, la tiene creada fuera de su repositorio— y una
+| migración publicada desde el paquete chocaría con ella.
+|
+| QUÉ HACE EL PAQUETE CON ESTA TABLA: SOLO LEERLA. No hay modelo, ni
+| repositorio de escritura, ni comando, ni CRUD. `ResolvesTenantDiskInterface`
+| tiene un único método, `locationFor()`. Crear y mantener las filas es
+| responsabilidad de la aplicación o de operación, hoy por SQL.
+|
+| SIN FILA NO PASA NADA: un cliente que no declara destino escribe en el disco
+| de `ATTACHMENTS_DISK`. Una tabla vacía significa «todos en el disco de
+| siempre», así que el paquete se puede desplegar sin cambiar nada para nadie.
+|
+|--------------------------------------------------------------------------
+| Qué significa cada columna
+|--------------------------------------------------------------------------
+|
+| `purpose`  Con qué clave se busca el destino. Sale de
+|            `AttachmentOwner::purpose()`: el módulo (`studies`) o el módulo
+|            con su ámbito (`studies.payroll`). El valor `attachments` es el
+|            COMODÍN del cliente: cubre cualquier adjunto sin fila específica.
+|            La búsqueda pide ambos en una sola consulta y gana el específico.
+|
+| `driver`   Con QUÉ se guarda. `s3` para un bucket; cualquier otro valor se
+|            interpreta como el nombre de un disco declarado en
+|            `config/filesystems.php`.
+|
+| `config`   JSON que dice DÓNDE. Para `s3`: {"bucket": "..."}. Para el resto:
+|            {"disk": "..."}, o se usa el propio valor de `driver`.
+|
+|            NUNCA GUARDA CREDENCIALES. Las llaves, endpoints y regiones viven
+|            en la definición del disco en `filesystems.php`, que las lee del
+|            entorno. La base del landlord no almacena secretos, y esa
+|            separación es deliberada.
+|
+| La restricción única es `(tenant_id, purpose)` y no `tenant_id` a secas: un
+| mismo cliente puede declarar un destino distinto por tipo de adjunto.
+|
+| DEPENDENCIA: la foreign key apunta a `tenants` en la conexión `landlord`.
+| Una aplicación que no sea multi-tenant no necesita esta tabla; debe registrar
+| sus propias implementaciones de `ResolvesTenantDiskInterface` y
+| `ResolvesStorageTenantInterface`. Ver `documentation/variables-entorno.md`,
+| sección 3.
+|
+*/
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::connection('landlord')->create('tenant_disks', function (Blueprint $table): void {
+            $table->id();
+            $table->char('uuid', 26)->unique();
+            $table->foreignId('tenant_id')->constrained('tenants')->restrictOnDelete();
+            // Módulo, o módulo.ámbito. `attachments` es el comodín del cliente.
+            $table->string('purpose', 50);
+            $table->string('driver', 20);
+            // JSON: {"bucket": "..."} o {"disk": "..."}. Sin credenciales.
+            $table->text('config')->nullable();
+            $table->char('status', 1)->default('1');
+            $table->timestamps();
+            $table->softDeletes();
+
+            // Un destino por cliente y propósito, no uno por cliente.
+            $table->unique(['tenant_id', 'purpose']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::connection('landlord')->dropIfExists('tenant_disks');
+    }
+};
