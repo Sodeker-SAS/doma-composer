@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instalación del paquete de adjuntos — Documentación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./sodeker.css">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('sodeker-docs-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    .pill {
+      display: inline-block;
+      background: var(--ink-050);
+      border: 1px solid var(--ink-100);
+      color: var(--ink-600);
+      font-family: var(--font-mono);
+      font-size: var(--fs-micro);
+      padding: 2px 8px;
+      border-radius: var(--r-sm);
+    }
+    .pill--accent {
+      background: var(--accent-50);
+      color: var(--accent-700);
+      border-color: var(--accent-100);
+      font-weight: 600;
+    }
+    .pill-list { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
+    .pill-note { font-size: var(--fs-micro); color: var(--ink-400); margin-top: var(--space-2); font-style: italic; }
+    .pill-note strong { color: var(--accent-700); font-style: normal; }
+
+    /* Terminal box (dark) */
+    .terminal {
+      border-radius: var(--r-md);
+      overflow: hidden;
+      border: 1px solid var(--ink-200);
+      box-shadow: var(--shadow-sm);
+      background: #0F172A;
+      margin: var(--space-3) 0;
+    }
+    .terminal__bar {
+      background: #1E293B;
+      padding: var(--space-3) var(--space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .terminal__dots { display: flex; gap: 5px; }
+    .terminal__dots span { width: 11px; height: 11px; border-radius: 50%; }
+    .dot-r, .dot-y, .dot-g { background: #64748B; }
+    .terminal__title {
+      font-size: var(--fs-micro);
+      font-weight: 600;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-left: var(--space-2);
+      font-family: var(--font-mono);
+    }
+    .terminal__body {
+      padding: var(--space-4) var(--space-5);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: #E2E8F0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .terminal__body .t-cmt    { color: #64748B; font-style: italic; }
+    .terminal__body .t-prompt { color: #7DD3FC; font-weight: 600; }
+    .terminal__body .t-cmd    { color: #E2E8F0; }
+    .terminal__body .t-arg    { color: #FCD34D; }
+    .terminal__body .t-flag   { color: #C4B5FD; }
+    .terminal__body .t-ok     { color: #86EFAC; font-style: italic; }
+    .terminal__body .t-err    { color: #FCA5A5; font-style: italic; }
+
+    /* Comandos numerados */
+    .cmd-stack { display: grid; gap: var(--space-4); margin: var(--space-5) 0; }
+    .cmd-item {
+      border: var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow-xs);
+    }
+    .cmd-item__head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-5);
+      background: var(--paper-tint);
+      border-bottom: 1px solid var(--ink-100);
+    }
+    .cmd-item__num {
+      width: 24px; height: 24px;
+      border-radius: var(--r-pill);
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: var(--fs-micro);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      flex: none;
+    }
+    .cmd-item__title { font-size: var(--fs-small); font-weight: 600; color: var(--ink-900); }
+    .cmd-item__code {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: var(--space-3) var(--space-5);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .cmd-item__code .t-arg  { color: #FCD34D; }
+    .cmd-item__code .t-flag { color: #C4B5FD; }
+    .cmd-item__code .t-cmt  { color: #64748B; font-style: italic; }
+    .cmd-item__foot {
+      padding: var(--space-3) var(--space-5);
+      font-size: var(--fs-small);
+      color: var(--ink-600);
+      border-top: 1px solid var(--ink-100);
+      background: var(--paper-tint);
+    }
+    .cmd-item__foot strong { color: var(--ink-900); }
+
+    /* Árbol de decisión */
+    .dt-svg { width: 100%; background: var(--ink-050); border: 1px solid var(--ink-200); border-radius: var(--r-md); }
+    .dt-node { cursor: pointer; transition: opacity .15s; }
+    .dt-node:hover { opacity: .85; }
+    .dt-node.dim { opacity: .3; cursor: default; }
+    .dt-edge { stroke: var(--ink-300); stroke-width: 2; fill: none; transition: stroke .2s; }
+    .dt-edge.lit { stroke: var(--accent); stroke-width: 3; }
+    .dt-edge.dim { opacity: .3; }
+    .dt-result { margin-top: var(--space-4); padding: var(--space-4) var(--space-5); border-radius: var(--r-md); min-height: 60px; border: 1px solid transparent; }
+    .dt-result.ok   { background: var(--success-50); color: var(--success-600); border-color: var(--success-200); }
+    .dt-result.no   { background: var(--danger-50);  color: var(--danger-600);  border-color: var(--danger-200); }
+    .dt-result.warn { background: var(--warning-50); color: var(--warning-600); border-color: var(--warning-200); }
+    .dt-result.idle { background: var(--ink-050); color: var(--ink-500); border-color: var(--ink-200); }
+    .dt-result__title { font-size: var(--fs-small); font-weight: 700; margin: 0 0 4px; }
+    .dt-result__desc  { font-size: var(--fs-small); margin: 0; line-height: 1.6; opacity: .9; }
+  </style>
+</head>
+<body class="with-grid">
+
+  <button class="theme-toggle" type="button" aria-label="Cambiar tema (claro / oscuro)" title="Cambiar tema">
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+    </svg>
+  </button>
+
+  <div class="doc-layout">
+    <main class="doc-content">
+
+      <!-- ============ HERO ============ -->
+      <header class="section" style="border-bottom: none; padding-top: var(--space-8);">
+        <span class="badge">Guía de instalación</span>
+        <h1 class="display" style="margin-top: var(--space-4);">
+          Instalar el paquete de <span class="accent">adjuntos</span>
+        </h1>
+        <p class="lede">
+          Cómo dejar de mantener el módulo de adjuntos copiado en cada proyecto y pasar a instalarlo
+          como paquete Composer desde el repositorio privado de la empresa. Incluye el proceso completo
+          de claves SSH, el acceso al repositorio y el paso a paso de instalación.
+        </p>
+
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="metric__value">7</div>
+            <div class="metric__label">pasos de instalación</div>
+          </div>
+          <div class="metric">
+            <div class="metric__value">4</div>
+            <div class="metric__label">variables de entorno</div>
+          </div>
+          <div class="metric">
+            <div class="metric__value">95</div>
+            <div class="metric__label">pruebas del paquete</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============ 1. CONTEXTO ============ -->
+      <section id="contexto" class="section">
+        <header class="section__header">
+          <span class="badge">Contexto</span>
+          <h2>Por qué existe el <span class="accent">paquete</span></h2>
+          <p class="lede">
+            El módulo de adjuntos vivía copiado dentro de cada proyecto. Arreglar un fallo obligaba a
+            repetir el mismo cambio en todos, uno por uno.
+          </p>
+        </header>
+
+        <div class="callout callout--warning">
+          <div class="callout__icon">▲</div>
+          <div>
+            <p class="callout__title">Las copias ya se separaron</p>
+            <p class="callout__body">
+              Al medir los archivos compartidos entre FINTEGRA, SAT e IRIS se encontró que
+              <strong>de 12 composables comunes solo 1 sigue siendo idéntico</strong> en los tres.
+              Las mejoras van en ambas direcciones y ningún proyecto tiene todas: FINTEGRA tiene
+              variantes que IRIS no tiene, y SAT tiene funciones que ninguno de los otros dos recibió.
+              No es un riesgo futuro, ya ocurrió.
+            </p>
+          </div>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 680 300" width="100%" role="img" aria-label="Comparación entre copiar el módulo en cada proyecto y consumirlo como paquete">
+            <text x="16" y="20" font-size="11" font-weight="700" fill="var(--ink-500)" letter-spacing="0.08em">ANTES · UNA COPIA POR PROYECTO</text>
+
+            <rect x="16"  y="36" width="150" height="52" rx="8" fill="var(--paper)" stroke="var(--ink-200)" stroke-width="1"/>
+            <text x="91"  y="60" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink-900)">FINTEGRA</text>
+            <text x="91"  y="76" text-anchor="middle" font-size="10" fill="var(--ink-500)">copia del módulo</text>
+
+            <rect x="182" y="36" width="150" height="52" rx="8" fill="var(--paper)" stroke="var(--ink-200)" stroke-width="1"/>
+            <text x="257" y="60" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink-900)">SAT</text>
+            <text x="257" y="76" text-anchor="middle" font-size="10" fill="var(--ink-500)">copia del módulo</text>
+
+            <rect x="348" y="36" width="150" height="52" rx="8" fill="var(--paper)" stroke="var(--ink-200)" stroke-width="1"/>
+            <text x="423" y="60" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink-900)">IRIS</text>
+            <text x="423" y="76" text-anchor="middle" font-size="10" fill="var(--ink-500)">copia del módulo</text>
+
+            <text x="524" y="66" font-size="11" fill="var(--danger-600)" font-weight="600">un arreglo × 3</text>
+
+            <line x1="16" y1="118" x2="664" y2="118" stroke="var(--ink-100)" stroke-width="1" stroke-dasharray="4 4"/>
+
+            <text x="16" y="150" font-size="11" font-weight="700" fill="var(--accent-700)" letter-spacing="0.08em">DESPUÉS · UNA FUENTE</text>
+
+            <rect x="248" y="166" width="184" height="52" rx="8" fill="var(--accent-50)" stroke="var(--accent-500)" stroke-width="1.5"/>
+            <text x="340" y="190" text-anchor="middle" font-size="12" font-weight="700" fill="var(--accent-700)">doma-composer</text>
+            <text x="340" y="206" text-anchor="middle" font-size="10" fill="var(--accent-700)">v1.0.0</text>
+
+            <path d="M 300 218 C 300 244, 91 244, 91 262"  class="connector" fill="none" stroke="var(--ink-300)" stroke-width="1.5"/>
+            <path d="M 340 218 L 340 262"                  class="connector" fill="none" stroke="var(--ink-300)" stroke-width="1.5"/>
+            <path d="M 380 218 C 380 244, 589 244, 589 262" class="connector" fill="none" stroke="var(--ink-300)" stroke-width="1.5"/>
+
+            <rect x="16"  y="262" width="150" height="30" rx="6" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="91"  y="281" text-anchor="middle" font-size="11" fill="var(--ink-700)">FINTEGRA</text>
+            <rect x="265" y="262" width="150" height="30" rx="6" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="340" y="281" text-anchor="middle" font-size="11" fill="var(--ink-700)">SAT</text>
+            <rect x="514" y="262" width="150" height="30" rx="6" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="589" y="281" text-anchor="middle" font-size="11" fill="var(--ink-700)">IRIS</text>
+          </svg>
+          <figcaption class="figure__caption">
+            <span class="figure__label">Figura 1</span>
+            El paquete no cambia lo que hace el módulo: cambia dónde vive. Cada aplicación declara qué
+            versión quiere y actualiza cuando le conviene.
+          </figcaption>
+        </figure>
+
+        <div class="card-grid">
+          <article class="card card--accent">
+            <h4 class="card__title">Qué es</h4>
+            <p class="card__body">
+              <span class="pill pill--accent">sodeker/laravel-attachments</span>, un paquete Composer
+              privado publicado en el repositorio <span class="pill">Sodeker-SAS/doma-composer</span>.
+              Valida el contenido real de cada archivo, resuelve el destino por cliente y registra los metadatos.
+            </p>
+          </article>
+          <article class="card card--accent">
+            <h4 class="card__title">Qué NO cambia al instalarlo</h4>
+            <p class="card__body">
+              Las rutas, el contrato HTTP, las tablas y los archivos ya guardados. La lectura usa la
+              clave persistida en cada fila, no un recálculo. <strong>No hay migración de datos.</strong>
+            </p>
+          </article>
+          <article class="card card--accent">
+            <h4 class="card__title">Qué sí cambia</h4>
+            <p class="card__body">
+              Las líneas <span class="pill">use</span> de los módulos que lo consumen:
+              <span class="pill">App\Modules\Attachments\…</span> pasa a
+              <span class="pill">Sodeker\Attachments\…</span>. Las firmas son idénticas.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ 2. PREGUNTAS ============ -->
+      <section id="preguntas" class="section">
+        <header class="section__header">
+          <span class="badge">Preguntas frecuentes</span>
+          <h2>Las dudas que aparecieron al <span class="accent">construirlo</span></h2>
+          <p class="lede">
+            Recopilación de las preguntas que surgieron durante el diseño y la publicación del paquete,
+            con la respuesta corta. Sirven para entender por qué está montado así.
+          </p>
+        </header>
+
+        <h3>Sobre el paquete y su instalación</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:38%">Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>¿Qué alternativa hay para no duplicar el módulo?</td>
+                <td>Un paquete Composer privado. Cada proyecto lo declara como dependencia y elige su versión.</td>
+              </tr>
+              <tr>
+                <td>Si el proyecto se llama IRIS, ¿hay que cambiar la tabla y el prefijo a mano?</td>
+                <td>No. El paquete <strong>no se edita, se configura</strong> con cuatro variables de entorno.</td>
+              </tr>
+              <tr>
+                <td>¿El código se descarga dentro del proyecto? ¿Crea <span class="pill">app/Modules/Attachments</span>?</td>
+                <td>No. Vive en <span class="pill">vendor/</span>, que está ignorado por git. Solo aparece en el proyecto lo que se publica (la configuración).</td>
+              </tr>
+              <tr>
+                <td>¿Cómo funciona el versionado?</td>
+                <td>Las versiones son <strong>tags de git</strong>, no un campo del <span class="pill">composer.json</span>. Cada app declara un rango como <span class="pill">^1.0</span> y el <span class="pill">composer.lock</span> fija el commit exacto.</td>
+              </tr>
+              <tr>
+                <td>¿Cambia el consumo desde el módulo que lo usa?</td>
+                <td>Solo las líneas <span class="pill">use</span>. Los 11 símbolos públicos conservan firmas idénticas.</td>
+              </tr>
+              <tr>
+                <td>¿Se ven afectados los endpoints de la API?</td>
+                <td>No. Rutas, cuerpo, respuestas y códigos de error siguen igual. Para un cliente externo la migración es invisible.</td>
+              </tr>
+              <tr>
+                <td>¿Basta con tener el paquete en el repositorio para instalarlo?</td>
+                <td>No. Cada aplicación debe declarar el repositorio en su <span class="pill">composer.json</span>, porque el paquete no está en el índice público.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Sobre el mantenimiento</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:38%">Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>¿Qué hay que tener en cuenta al hacer un ajuste?</td>
+                <td>Saber cuál es la API pública, respaldar el cambio con una prueba, ejecutar Pest y Pint, y publicar una versión según su impacto.</td>
+              </tr>
+              <tr>
+                <td>¿Cómo se trabaja en local mientras se modifica el paquete?</td>
+                <td>Con un repositorio de tipo <span class="pill">path</span> y enlace simbólico: se edita el paquete y el proyecto lo ve al instante, sin reinstalar.</td>
+              </tr>
+              <tr>
+                <td>¿El paquete administra la tabla <span class="pill">tenant_disks</span>?</td>
+                <td><strong>Solo la lee.</strong> No trae modelo, escritura ni comando. Crear y mantener sus filas es responsabilidad de la aplicación.</td>
+              </tr>
+              <tr>
+                <td>¿Y si hay varios servidores Synology, uno por empresa?</td>
+                <td>Se declara <strong>un disco por servidor</strong> en <span class="pill">filesystems.php</span>, cada uno con variables propias. La fila del cliente solo nombra el disco; las credenciales nunca salen de la base de datos.</td>
+              </tr>
+              <tr>
+                <td>Si se implementa una librería nueva (por ejemplo LibreOffice), ¿hay que reestructurar?</td>
+                <td>No. Las dependencias opcionales van en <span class="pill">suggest</span> y el código habla con una interfaz propia, nunca con las clases de la librería.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Sobre la estructura del repositorio</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:38%">Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>¿Es viable un solo repositorio para todos los módulos y componentes?</td>
+                <td>Sí. Un repositorio puede tener <span class="pill">composer.json</span> y <span class="pill">package.json</span> a la vez, y servir las dos mitades.</td>
+              </tr>
+              <tr>
+                <td>¿Cuál es el estándar de la industria?</td>
+                <td>Repositorio único con publicación automática por paquete (lo que hacen Laravel y Symfony). Requiere integración continua, así que se adoptará cuando el número de paquetes lo justifique.</td>
+              </tr>
+              <tr>
+                <td>Si se modifica un componente Vue, ¿sube la versión del módulo PHP?</td>
+                <td>El número sí; el contenido no. Y como son instalaciones independientes, un proyecto puede actualizar solo una de las dos mitades.</td>
+              </tr>
+              <tr>
+                <td>¿Se puede instalar la versión de una pieza suelta?</td>
+                <td>No. El <strong>paquete</strong> es la unidad de versión. Separar piezas es lo que resuelven los <em>splits</em>, que hoy no se usan.</td>
+              </tr>
+              <tr>
+                <td>¿Se puede descargar un solo módulo y no los demás?</td>
+                <td>Se descargan todos, pero <strong>solo se activa el que se registre</strong>. El módulo de adjuntos ocupa 168&nbsp;KB frente a los 152&nbsp;MB que un proyecto ya descarga en librerías.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Sobre los destinos de almacenamiento</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:38%">Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>¿Cómo diferencia el módulo que un archivo va al Synology y otro al disco local?</td>
+                <td>Por el <strong>propósito</strong>, una etiqueta con la forma <span class="pill">módulo.ámbito</span> que declara el módulo consumidor al construir el <span class="pill">AttachmentOwner</span>. No se decide en el código, sino en filas de <span class="pill">tenant_disks</span>.</td>
+              </tr>
+              <tr>
+                <td>¿Qué función toma esa decisión?</td>
+                <td>Una sola: <span class="pill">LandlordTenantDiskResolver::locationFor()</span>. Todo lo demás la alimenta o consume su resultado.</td>
+              </tr>
+              <tr>
+                <td>¿Cómo configuro que los adjuntos de comprobantes vayan al Synology?</td>
+                <td>Con <strong>una fila</strong> de <span class="pill">purpose = 'vouchers.supports'</span> apuntando al disco. Lo demás cae en el disco por defecto sin configurar nada. Receta completa en la guía extensa.</td>
+              </tr>
+              <tr>
+                <td>En <span class="pill">{"disk":"nas"}</span>, ¿<span class="pill">nas</span> es la clave de <span class="pill">filesystems.php</span>?</td>
+                <td>Sí. Se busca <span class="pill">config('filesystems.disks.nas')</span>. Si lo cambias por <span class="pill">nas_sodeker</span>, buscará esa clave. <strong>La fila nunca guarda credenciales</strong>: solo el nombre del disco.</td>
+              </tr>
+              <tr>
+                <td>¿Cambiar ese destino mueve los archivos ya subidos?</td>
+                <td>No. Cada adjunto guarda su propia <span class="pill">storage_location</span> y se sigue leyendo de donde esté. El cambio solo afecta a lo nuevo, y <strong>el disco antiguo debe seguir declarado</strong>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Sobre el acceso</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:38%">Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>¿Se puede instalar sin token?</td>
+                <td>Sí, con claves SSH y la opción <span class="pill">"no-api": true</span>. Es el método elegido.</td>
+              </tr>
+              <tr>
+                <td>¿Por qué instalar una librería de Laravel no pide ninguna credencial?</td>
+                <td>Porque es pública. La credencial no la impone Composer, la impone que el repositorio sea privado. <strong>Privado y sin credenciales son incompatibles por definición.</strong></td>
+              </tr>
+              <tr>
+                <td>¿Quién puede instalar el paquete?</td>
+                <td>Quien tenga permiso de lectura sobre el repositorio en GitHub y una clave SSH registrada en su cuenta. Se administra en GitHub, no en el paquete.</td>
+              </tr>
+              <tr>
+                <td>¿El repositorio privado da problemas con npm?</td>
+                <td>No. npm instala directamente desde git usando la misma clave SSH, y admite rangos de versión con <span class="pill">#semver:^1.0.0</span>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 3. CLAVES SSH ============ -->
+      <section id="claves-ssh" class="section">
+        <header class="section__header">
+          <span class="badge">Claves SSH</span>
+          <h2>Preparar tu <span class="accent">credencial</span></h2>
+          <p class="lede">
+            Proceso completo, desde cero. Si ya haces <span class="pill">git clone</span> por SSH a diario,
+            probablemente solo tengas que verificar el paso 6.
+          </p>
+        </header>
+
+        <p>
+          Una clave SSH es un par de archivos: uno <strong>privado</strong>, que nunca sale de tu equipo, y
+          uno <strong>público</strong>, que se registra en GitHub. Piensa en ello como una cerradura y su
+          llave: la cerradura se instala en GitHub y la llave se queda contigo. Nadie puede deducir la
+          llave a partir de la cerradura.
+        </p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 680 150" width="100%" role="img" aria-label="Cadena de autenticación desde el equipo hasta el paquete instalado">
+            <rect x="8"   y="46" width="120" height="54" rx="8" fill="var(--accent-50)" stroke="var(--accent-500)" stroke-width="1.5"/>
+            <text x="68"  y="68" text-anchor="middle" font-size="11" font-weight="700" fill="var(--accent-700)">Tu equipo</text>
+            <text x="68"  y="85" text-anchor="middle" font-size="10" fill="var(--accent-700)">clave privada</text>
+
+            <path d="M 128 73 L 168 73" stroke="var(--ink-300)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+            <rect x="170" y="46" width="120" height="54" rx="8" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="230" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-900)">Agente SSH</text>
+            <text x="230" y="85" text-anchor="middle" font-size="10" fill="var(--ink-500)">firma sin entregar</text>
+
+            <path d="M 290 73 L 330 73" stroke="var(--ink-300)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+            <rect x="332" y="46" width="120" height="54" rx="8" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="392" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-900)">Contenedor</text>
+            <text x="392" y="85" text-anchor="middle" font-size="10" fill="var(--ink-500)">usa el agente</text>
+
+            <path d="M 452 73 L 492 73" stroke="var(--ink-300)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+            <rect x="494" y="46" width="120" height="54" rx="8" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="554" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-900)">GitHub</text>
+            <text x="554" y="85" text-anchor="middle" font-size="10" fill="var(--ink-500)">clave pública</text>
+
+            <text x="8" y="130" font-size="10" fill="var(--ink-500)">Si cualquiera de los cuatro eslabones falta, el síntoma es el mismo: Composer pide un token.</text>
+
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ink-300)"/>
+              </marker>
+            </defs>
+          </svg>
+          <figcaption class="figure__caption">
+            <span class="figure__label">Figura 2</span>
+            La clave privada nunca entra al contenedor: el agente firma en su nombre. Por eso se
+            comparte el agente y no el archivo.
+          </figcaption>
+        </figure>
+
+        <div class="cmd-stack">
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">1</span><span class="cmd-item__title">Comprobar si ya tienes una clave</span></div>
+            <div class="cmd-item__code">ls -la ~/.ssh/*.pub</div>
+            <div class="cmd-item__foot">Si aparece <strong>id_ed25519.pub</strong> o <strong>id_rsa.pub</strong>, ya tienes clave. Salta al paso 3.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">2</span><span class="cmd-item__title">Generar una clave nueva</span></div>
+            <div class="cmd-item__code">ssh-keygen <span class="t-flag">-t</span> <span class="t-arg">ed25519</span> <span class="t-flag">-C</span> <span class="t-arg">"tu-correo@sodeker.co"</span></div>
+            <div class="cmd-item__foot">Acepta la ruta por defecto. La <strong>frase de paso es opcional</strong> pero recomendada: protege la clave si alguien accede a tu equipo.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">3</span><span class="cmd-item__title">Cargar la clave en el agente</span></div>
+            <div class="cmd-item__code">ssh-add <span class="t-flag">--apple-use-keychain</span> ~/.ssh/id_ed25519</div>
+            <div class="cmd-item__foot">El <strong>llavero de macOS</strong> la recuerda entre reinicios, así que no hay que repetirlo cada día. En Linux, se omite el flag.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">4</span><span class="cmd-item__title">Copiar la clave pública</span></div>
+            <div class="cmd-item__code">pbcopy &lt; ~/.ssh/id_ed25519.pub</div>
+            <div class="cmd-item__foot">Copia solo el archivo <strong>.pub</strong>. El archivo sin extensión es la clave privada y <strong>nunca se comparte ni se sube a ningún sitio</strong>.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">5</span><span class="cmd-item__title">Registrarla en GitHub</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># En el navegador:</span>
+github.com → Settings → SSH and GPG keys → New SSH key</div>
+            <div class="cmd-item__foot">Pega el contenido y ponle un <strong>título que identifique el equipo</strong> (“MacBook de Frank”). Así se sabe cuál revocar si se pierde un portátil.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">6</span><span class="cmd-item__title">Verificar</span></div>
+            <div class="cmd-item__code">ssh <span class="t-flag">-T</span> <span class="t-arg">git@github.com</span></div>
+            <div class="cmd-item__foot">Es la comprobación que <strong>decide si todo lo demás va a funcionar</strong>. No sigas si falla.</div>
+          </div>
+        </div>
+
+        <div class="terminal">
+          <div class="terminal__bar">
+            <div class="terminal__dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="terminal__title">respuesta esperada</span>
+          </div>
+          <div class="terminal__body"><span class="t-prompt">$</span> <span class="t-cmd">ssh</span> <span class="t-flag">-T</span> <span class="t-arg">git@github.com</span>
+<span class="t-ok">Hi fsjaimes! You've successfully authenticated, but GitHub does not provide shell access.</span>
+
+<span class="t-cmt"># Ese "Hi &lt;usuario&gt;" es la señal de éxito. GitHub no da acceso a consola,</span>
+<span class="t-cmt"># así que el mensaje sobre shell access es normal, no un error.</span>
+          </div>
+        </div>
+
+        <div class="callout callout--danger">
+          <div class="callout__icon">!</div>
+          <div>
+            <p class="callout__title">La clave privada no se comparte nunca</p>
+            <p class="callout__body">
+              Ni por correo, ni por chat, ni copiándola dentro de una imagen de Docker. Si necesitas que
+              un servidor acceda al repositorio, no uses tu clave: usa una <strong>deploy key</strong>,
+              como se explica en la sección siguiente.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 4. ACCESO ============ -->
+      <section id="acceso" class="section">
+        <header class="section__header">
+          <span class="badge">Acceso al repositorio</span>
+          <h2>Quién puede <span class="accent">instalarlo</span></h2>
+          <p class="lede">
+            El control de acceso no vive en el paquete ni en Composer: vive en GitHub. Es la misma lista
+            de personas que hoy pueden clonar el repositorio.
+          </p>
+        </header>
+
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th>Quién</th><th>Qué necesita</th><th>Cómo se concede</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Desarrollador</strong></td>
+                <td>Lectura sobre <span class="pill">doma-composer</span> y una clave SSH en su cuenta</td>
+                <td>Pertenecer a un equipo de la organización con permiso <em>Read</em></td>
+              </tr>
+              <tr>
+                <td><strong>Servidor de producción</strong></td>
+                <td>Una <em>deploy key</em> de solo lectura</td>
+                <td>Se registra en el propio repositorio, no en una cuenta personal</td>
+              </tr>
+              <tr>
+                <td><strong>Integración continua</strong></td>
+                <td>La misma <em>deploy key</em>, o una propia</td>
+                <td>Se guarda como secreto del pipeline</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card-grid">
+          <article class="card card--accent-left">
+            <h4 class="card__title">Dar de alta a alguien</h4>
+            <p class="card__body">
+              Añadirlo al equipo en GitHub. Si ya trabaja con los repositorios de la empresa,
+              <strong>no tiene que hacer nada más</strong>: usa la misma credencial de siempre.
+            </p>
+          </article>
+          <article class="card card--accent-left">
+            <h4 class="card__title">Dar de baja</h4>
+            <p class="card__body">
+              Quitarlo de la organización. Pierde el acceso <strong>al instante y en todas partes</strong>.
+              Es la ventaja frente a un token, que puede quedar copiado en un equipo que ya nadie controla.
+            </p>
+          </article>
+          <article class="card card--accent-left">
+            <h4 class="card__title">Una sola llave para todo</h4>
+            <p class="card__body">
+              Como todos los módulos viven en un mismo repositorio, <strong>una única deploy key
+              cubre los módulos futuros</strong> y también el paquete de componentes.
+            </p>
+          </article>
+        </div>
+
+        <h3>Deploy key para servidores</h3>
+        <div class="cmd-stack">
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">1</span><span class="cmd-item__title">Generar la llave en el servidor</span></div>
+            <div class="cmd-item__code">ssh-keygen <span class="t-flag">-t</span> <span class="t-arg">ed25519</span> <span class="t-flag">-f</span> <span class="t-arg">~/.ssh/doma_composer</span> <span class="t-flag">-N</span> <span class="t-arg">""</span></div>
+            <div class="cmd-item__foot">Sin frase de paso, porque ningún humano va a escribirla durante un despliegue automático.</div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">2</span><span class="cmd-item__title">Registrarla en el repositorio</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># doma-composer → Settings → Deploy keys → Add deploy key</span>
+<span class="t-cmt"># Pegar el contenido de ~/.ssh/doma_composer.pub</span>
+<span class="t-cmt"># NO marcar "Allow write access"</span></div>
+            <div class="cmd-item__foot">Solo lectura. El servidor nunca necesita escribir en el repositorio.</div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">3</span><span class="cmd-item__title">Indicar a git qué llave usar</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># ~/.ssh/config</span>
+Host github.com
+    IdentityFile ~/.ssh/doma_composer
+    IdentitiesOnly yes</div>
+            <div class="cmd-item__foot">Sin esto, git prueba otras llaves y puede fallar sin explicar por qué.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 5. INSTALACIÓN ============ -->
+      <section id="instalacion" class="section">
+        <header class="section__header">
+          <span class="badge">Instalación</span>
+          <h2>Paso a paso en un <span class="accent">proyecto</span></h2>
+          <p class="lede">
+            Siete pasos. Los ejemplos usan SAT, pero el procedimiento es idéntico en cualquier proyecto:
+            solo cambian los valores del paso 5.
+          </p>
+        </header>
+
+        <div class="callout callout--warning">
+          <div class="callout__icon">▲</div>
+          <div>
+            <p class="callout__title">Dónde se ejecuta cada comando</p>
+            <p class="callout__body">
+              Salvo el paso 1 y el paso 3, <strong>todos los comandos se ejecutan dentro del
+              contenedor</strong>. Si ya entraste al contenedor —el prompt es
+              <span class="pill">#</span>— escríbelos tal cual. Si estás en tu Mac, antepón
+              <span class="pill">docker compose exec php</span> a cada uno.
+              El error <span class="pill">docker: not found</span> significa que estabas
+              anteponiendo el prefijo <em>estando ya dentro</em>: Docker no existe dentro del contenedor.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="callout__icon">●</div>
+          <div>
+            <p class="callout__title">Antes de empezar</p>
+            <p class="callout__body">
+              Si el proyecto ya tenía el módulo copiado dentro, hay que retirarlo primero:
+              <span class="pill">app/Modules/Attachments</span>, <span class="pill">app/Shared/Attachments</span>,
+              <span class="pill">config/attachments.php</span> y el registro del provider en
+              <span class="pill">config/app.php</span>. Los módulos que lo consumen se dejan intactos:
+              se ajustan en el paso 6.
+            </p>
+          </div>
+        </div>
+
+        <div class="cmd-stack">
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">1</span><span class="cmd-item__title">Verificar la clave SSH</span></div>
+            <div class="cmd-item__code">ssh <span class="t-flag">-T</span> <span class="t-arg">git@github.com</span></div>
+            <div class="cmd-item__foot"><strong>En tu Mac.</strong> Debe saludarte por tu usuario. <strong>Si falla, no sigas</strong>: todo lo demás depende de este paso.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">2</span><span class="cmd-item__title">Declarar el repositorio en composer.json</span></div>
+            <div class="cmd-item__code"><span class="t-cmt">// composer.json del proyecto</span>
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "git@github.com:Sodeker-SAS/doma-composer.git",
+        "no-api": true
+    }
+]</div>
+            <div class="cmd-item__foot"><strong><span class="pill pill--accent">"no-api": true</span> es imprescindible.</strong> Sin él, Composer consulta la API de GitHub, que exige un token, aunque el acceso por SSH funcione.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">2b</span><span class="cmd-item__title">Instalar este paquete desde el código, no desde el zip</span></div>
+            <div class="cmd-item__code"><span class="t-cmt">// composer.json → config</span>
+"config": {
+    "preferred-install": {
+        "sodeker/*": "source",
+        "*": "dist"
+    }
+}</div>
+            <div class="cmd-item__foot"><strong>Obligatorio en todos los proyectos de Sódeker</strong>, porque todos traen <span class="pill">"preferred-install": "dist"</span>. Ese ajuste hace que Composer descargue un zip desde la API de GitHub, que en un repositorio privado responde <span class="pill">404</span> sin token. Con <span class="pill">source</span> el paquete se clona por SSH. El resto de dependencias públicas siguen usando <span class="pill">dist</span>, que es más rápido.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">3</span><span class="cmd-item__title">Compartir el agente SSH con el contenedor</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># docker-compose.yml</span>
+php:
+    volumes:
+        - ./:/var/www
+        - /run/host-services/ssh-auth.sock:/ssh-agent
+    environment:
+        - SSH_AUTH_SOCK=/ssh-agent</div>
+            <div class="cmd-item__foot">El contenedor es una máquina distinta y <strong>no hereda tus claves</strong>. Esta ruta la expone Docker Desktop en macOS. Después, <strong>en tu Mac</strong>: <span class="pill">docker compose up -d --force-recreate php</span>. Luego, ya dentro del contenedor, acepta la huella de GitHub la primera vez con <span class="pill">ssh -o StrictHostKeyChecking=accept-new -T git@github.com</span> — si respondes <strong>no</strong> a esa pregunta, la conexión se aborta y la instalación fallará.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">3b</span><span class="cmd-item__title">Comprobar que el agente llega con claves — la prueba definitiva</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># en tu Mac: cargar la clave en el agente</span>
+ssh-add <span class="t-flag">--apple-use-keychain</span> ~/.ssh/id_ed25519
+ssh-add <span class="t-flag">-l</span>
+
+<span class="t-cmt"># dentro del contenedor: debe listar LA MISMA clave</span>
+ssh-add <span class="t-flag">-l</span></div>
+            <div class="cmd-item__foot"><strong>No te saltes este paso.</strong> Que <span class="pill">ssh -T</span> funcione en tu Mac <em>no</em> demuestra que el contenedor pueda autenticarse: en el Mac, <span class="pill">ssh</span> lee la clave del archivo <span class="pill">~/.ssh/id_ed25519</span> directamente, mientras que el contenedor <strong>solo recibe el agente</strong>. Si el agente está vacío —<span class="pill">The agent has no identities</span>— el contenedor no tiene nada que ofrecer y falla con <span class="pill">Permission denied (publickey)</span>. Si dentro del contenedor aparece la clave, el reenvío funciona y Composer no volverá a pedir token.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">4</span><span class="cmd-item__title">Instalar el paquete</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># dentro del contenedor</span>
+composer require <span class="t-arg">sodeker/laravel-attachments:^1.0</span></div>
+            <div class="cmd-item__foot">Se pide <strong>sodeker/laravel-attachments</strong>, no el nombre del repositorio: Composer lee el nombre del paquete de su propio <span class="pill">composer.json</span>.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">5</span><span class="cmd-item__title">Declarar las variables de entorno</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># .env — valores de ejemplo para SAT</span>
+ATTACHMENTS_TABLE=<span class="t-arg">sat_attachments</span>
+ATTACHMENTS_CONNECTION=<span class="t-arg">tenant</span>
+ATTACHMENTS_APP_PREFIX=<span class="t-arg">sat</span>
+ATTACHMENTS_DISK=<span class="t-arg">public</span></div>
+            <div class="cmd-item__foot"><strong>El paso que rompe si se olvida.</strong> Sin estas variables el paquete busca una tabla llamada <span class="pill">attachments</span> que no existe.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">6</span><span class="cmd-item__title">Actualizar los imports de los consumidores</span></div>
+            <div class="cmd-item__code">grep <span class="t-flag">-rl</span> <span class="t-arg">'App\\Modules\\Attachments\|App\\Shared\\Attachments'</span> app tests <span class="t-flag">--include=</span><span class="t-arg">"*.php"</span> \
+  | xargs sed <span class="t-flag">-i</span> \
+      <span class="t-flag">-e</span> <span class="t-arg">'s/App\\Modules\\Attachments\\/Sodeker\\Attachments\\/g'</span> \
+      <span class="t-flag">-e</span> <span class="t-arg">'s/App\\Shared\\Attachments\\/Sodeker\\Attachments\\/g'</span></div>
+            <div class="cmd-item__foot">Cambia solo la <strong>procedencia</strong>, no el comportamiento. Los <span class="pill">Concerns</span> y <span class="pill">Contracts</span> que estaban en <span class="pill">App\Shared</span> quedan bajo <span class="pill">Sodeker\Attachments</span>.<br><br><strong>Ojo con la sintaxis de <span class="pill">sed</span>:</strong> dentro del contenedor (Linux) es <span class="pill">sed -i</span> a secas, como arriba. En macOS sería <span class="pill">sed -i ''</span>; si usas las comillas en Linux, se interpretan como un archivo vacío y falla. Después, comprueba con <span class="pill">grep -rn 'App\\Modules\\Attachments' app tests</span> que no devuelve nada.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">7</span><span class="cmd-item__title">Limpiar cachés y verificar</span></div>
+            <div class="cmd-item__code">php artisan optimize:clear
+composer dump-autoload
+php artisan test <span class="t-flag">--filter=</span><span class="t-arg">Attachment</span></div>
+            <div class="cmd-item__foot">El <strong>optimize:clear</strong> es imprescindible: con la configuración cacheada se seguiría leyendo la anterior y parecería que nada funcionó.</div>
+          </div>
+        </div>
+
+        <h3>Valores por proyecto</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th>Proyecto</th><th>ATTACHMENTS_TABLE</th><th>ATTACHMENTS_APP_PREFIX</th><th>ATTACHMENTS_CONNECTION</th></tr></thead>
+            <tbody>
+              <tr><td>FINTEGRA</td><td><span class="pill">fin_attachments</span></td><td><span class="pill">fintegra</span></td><td><span class="pill">tenant</span></td></tr>
+              <tr><td>SAT</td><td><span class="pill">sat_attachments</span></td><td><span class="pill">sat</span></td><td><span class="pill">tenant</span></td></tr>
+              <tr><td>IRIS</td><td><span class="pill">iris_attachments</span></td><td><span class="pill">iris</span></td><td><span class="pill">tenant</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout--warning">
+          <div class="callout__icon">▲</div>
+          <div>
+            <p class="callout__title">Estas variables son identidad, no preferencias</p>
+            <p class="callout__body">
+              Se eligen una sola vez, al instalar. Cambiar <span class="pill">ATTACHMENTS_TABLE</span> o
+              <span class="pill">ATTACHMENTS_CONNECTION</span> con datos existentes deja los adjuntos
+              fuera de vista, aunque los archivos sigan en disco.
+              Cambiar <span class="pill">ATTACHMENTS_APP_PREFIX</span> no rompe lo ya escrito —la clave
+              se guarda en cada fila— pero parte el almacenamiento en dos raíces.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="callout__icon">●</div>
+          <div>
+            <p class="callout__title">No publiques migraciones ni registres el provider</p>
+            <p class="callout__body">
+              El paquete <strong>no expone migraciones</strong>: cada aplicación ya tiene su tabla creada.
+              La estructura esperada está documentada, sin ser ejecutable, en <span class="pill">database/schema/</span>.
+              Y el service provider <strong>se descubre automáticamente</strong>: añadirlo a
+              <span class="pill">config/app.php</span> lo duplicaría.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 6. DIAGNÓSTICO ============ -->
+      <section id="diagnostico" class="section">
+        <header class="section__header">
+          <span class="badge">Diagnóstico</span>
+          <h2>Cuando la instalación <span class="accent">falla</span></h2>
+          <p class="lede">
+            Casi todos los fallos de instalación producen el mismo síntoma —Composer pide un token— pero
+            tienen causas distintas. Este árbol las separa.
+          </p>
+        </header>
+
+        <p style="font-size: var(--fs-small); color: var(--ink-500);">
+          <span class="interactive-badge" aria-label="Interactivo">↺</span>
+          Haz clic en cada condición para llegar a la causa.
+          <button class="btn btn--secondary" id="dt-reset" type="button" style="font-size:12px;padding:4px 10px;margin-left:10px;">Reiniciar</button>
+        </p>
+
+        <svg class="dt-svg" id="dt-svg" viewBox="0 0 640 340"></svg>
+        <div class="dt-result idle" id="dt-result">
+          <p class="dt-result__title" id="dt-rt">Empieza por la pregunta de arriba</p>
+          <p class="dt-result__desc" id="dt-rd">Las ramas que descartes se atenuarán.</p>
+        </div>
+
+        <h3>Mensajes de error habituales</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:32%">Mensaje</th><th>Causa</th><th>Solución</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="pill">Your GitHub credentials are required</span></td>
+                <td>Composer está usando la API de GitHub en lugar de SSH.</td>
+                <td>Añadir <span class="pill">"no-api": true</span> al repositorio en <span class="pill">composer.json</span>.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">HTTP 404 · Not Found</span> sobre <span class="pill">api.github.com</span></td>
+                <td>El token no tiene acceso al repositorio. GitHub responde 404 en vez de 403 para no revelar si un repositorio privado existe.</td>
+                <td>Dejar de usar token y pasar a SSH, o revisar que el token esté aprobado por la organización.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">404</span> al descargar <span class="pill">…/zipball/…</span></td>
+                <td>El proyecto fuerza <span class="pill">"preferred-install": "dist"</span>, así que Composer pide un zip a la API de GitHub en vez de clonar por SSH.</td>
+                <td>Declarar <span class="pill">"sodeker/*": "source"</span> en <span class="pill">config.preferred-install</span>. Ver paso 2b.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Permission denied (publickey)</span></td>
+                <td>La clave no está registrada en GitHub, o no está cargada en el agente.</td>
+                <td>Repetir los pasos 3 y 5 de la sección de claves SSH.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">The agent has no identities</span></td>
+                <td>El agente SSH se reenvió correctamente, pero está <strong>vacío</strong>: nadie cargó la clave en él. En el Mac todo funciona porque <span class="pill">ssh</span> lee el archivo directamente.</td>
+                <td>En tu Mac: <span class="pill">ssh-add --apple-use-keychain ~/.ssh/id_ed25519</span>. Ver paso 3b.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">sed: can't read : No such file or directory</span></td>
+                <td>Se usó la sintaxis de macOS (<span class="pill">sed -i ''</span>) dentro del contenedor, que es Linux.</td>
+                <td>En Linux es <span class="pill">sed -i</span> sin comillas. Ver paso 6.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Host key verification failed</span></td>
+                <td>El contenedor no conoce la huella de GitHub.</td>
+                <td>Ejecutar dentro: <span class="pill">ssh -o StrictHostKeyChecking=accept-new -T git@github.com</span></td>
+              </tr>
+              <tr>
+                <td><span class="pill">Base table or view not found</span></td>
+                <td>Falta <span class="pill">ATTACHMENTS_TABLE</span>, así que el paquete busca la tabla genérica.</td>
+                <td>Declarar las cuatro variables del paso 5 y ejecutar <span class="pill">php artisan optimize:clear</span>.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Class not found · Sodeker\Attachments\…</span></td>
+                <td>El autoloader no se regeneró tras cambiar los imports.</td>
+                <td><span class="pill">composer dump-autoload</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 7. SOPORTE ============ -->
+      <section id="soporte" class="section">
+        <header class="section__header">
+          <span class="badge">Soporte</span>
+          <h2>Explicado sin <span class="accent">tecnicismos</span></h2>
+          <p class="lede">
+            Para quien tenga que entender o explicar este cambio sin haber tocado el código.
+          </p>
+        </header>
+
+        <div class="card-grid">
+          <article class="card">
+            <h4 class="card__title">¿Qué se hizo?</h4>
+            <p class="card__body">
+              Una parte del sistema —la que guarda y gestiona los archivos adjuntos— estaba copiada
+              dentro de cada proyecto. Ahora vive en un solo sitio y cada proyecto la <em>pide</em>
+              en lugar de guardar su propia copia.
+            </p>
+          </article>
+          <article class="card">
+            <h4 class="card__title">¿Por qué?</h4>
+            <p class="card__body">
+              Porque una mejora hecha en un proyecto no llegaba a los demás. Al medirlo se comprobó
+              que de doce piezas compartidas solo una seguía siendo igual en los tres proyectos
+              revisados.
+            </p>
+          </article>
+          <article class="card">
+            <h4 class="card__title">¿Cambia algo para el usuario?</h4>
+            <p class="card__body">
+              No. Ni las pantallas, ni los archivos ya guardados, ni la forma de subirlos. Es un cambio
+              interno de organización del código.
+            </p>
+          </article>
+        </div>
+
+        <h3>Preguntas que suelen surgir</h3>
+
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:36%">Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>¿Por qué pide una credencial si otras librerías no?</td>
+                <td>Porque las otras son públicas: cualquiera en el mundo puede descargarlas, así que no hay a quién identificar. Esta es privada de la empresa, y la credencial es precisamente lo que la mantiene privada.</td>
+              </tr>
+              <tr>
+                <td>¿Hay que crear una contraseña nueva para cada persona?</td>
+                <td>No. Se usa el mismo acceso a GitHub que cada desarrollador ya tiene para su trabajo diario. Para alguien nuevo, basta con añadirlo al equipo.</td>
+              </tr>
+              <tr>
+                <td>¿Qué pasa si alguien deja la empresa?</td>
+                <td>Al quitarlo de la organización pierde el acceso de inmediato y en todos los sitios a la vez. Los servidores no se ven afectados porque usan una llave propia que no pertenece a ninguna persona.</td>
+              </tr>
+              <tr>
+                <td>¿Se pierden los archivos ya subidos?</td>
+                <td>No. Ni se mueven ni se renombran. El sistema los localiza por la información guardada junto a cada archivo.</td>
+              </tr>
+              <tr>
+                <td>¿Todos los proyectos tienen que actualizarse a la vez?</td>
+                <td>No. Cada proyecto decide cuándo adopta una versión nueva. Un cambio publicado hoy puede aplicarse a un proyecto esta semana y a otro el mes que viene.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout--success">
+          <div class="callout__icon">✓</div>
+          <div>
+            <p class="callout__title">Cómo saber que quedó bien instalado</p>
+            <p class="callout__body">
+              Subir un archivo adjunto desde la aplicación y volver a abrirlo. Si se guarda y se
+              descarga con normalidad, la instalación es correcta. Los adjuntos anteriores deben
+              seguir abriéndose igual que antes.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ REFERENCIAS ============ -->
+      <section id="referencias" class="section">
+        <header class="section__header">
+          <span class="badge">Referencias</span>
+          <h2>Dónde seguir <span class="accent">leyendo</span></h2>
+          <p class="lede">Documentos del propio paquete, dentro del repositorio.</p>
+        </header>
+
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th>Archivo</th><th>Para qué</th></tr></thead>
+            <tbody>
+              <tr><td><span class="pill">AGENTS.md</span></td><td>Cómo consumir el módulo desde un módulo de negocio: contratos, flujos y antipatrones.</td></tr>
+              <tr><td><span class="pill">documentation/variables-entorno.md</span></td><td>Las cuatro variables en detalle y el patrón de varios servidores SFTP.</td></tr>
+              <tr><td><span class="pill">CHANGELOG.md</span></td><td>Qué cambió en cada versión y qué acción manual exige actualizar.</td></tr>
+              <tr><td><span class="pill">documentation-modulo-adjuntos.html</span></td><td>Guía extensa: arquitectura, modelo de datos y operación.</td></tr>
+              <tr><td><span class="pill">database/schema/</span></td><td>Estructura esperada de las tablas, como referencia no ejecutable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <nav class="doc-nav" aria-label="Navegación de la documentación">
+      <p class="doc-nav__label">Contenido</p>
+      <ul class="doc-nav__list">
+        <li><a href="#contexto">Contexto</a></li>
+        <li><a href="#preguntas">Preguntas frecuentes</a></li>
+        <li><a href="#claves-ssh">Claves SSH</a></li>
+        <li><a href="#acceso">Acceso al repositorio</a></li>
+        <li><a href="#instalacion">Instalación</a></li>
+        <li><a href="#diagnostico">Diagnóstico</a></li>
+        <li><a href="#soporte">Soporte</a></li>
+        <li><a href="#referencias">Referencias</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <script>
+    (function () {
+      const btn = document.querySelector('.theme-toggle');
+      if (!btn) return;
+      const root = document.documentElement;
+      btn.setAttribute('aria-pressed', root.getAttribute('data-theme') === 'dark');
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        btn.setAttribute('aria-pressed', next === 'dark');
+        try { localStorage.setItem('sodeker-docs-theme', next); } catch (e) {}
+      });
+    })();
+
+    (function () {
+      const links = document.querySelectorAll('.doc-nav__list a[href^="#"]');
+      const targets = Array.from(links).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+      if (!targets.length) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            const id = '#' + e.target.id;
+            links.forEach(l => l.classList.toggle('is-active', l.getAttribute('href') === id));
+          }
+        });
+      }, { rootMargin: '-30% 0px -60% 0px' });
+      targets.forEach(t => obs.observe(t));
+    })();
+
+    // Árbol de decisión — diagnóstico de instalación
+    (function(){
+      const tree = {
+        nodos: [
+          { id:'root',  pregunta:'¿ssh -T saluda?',      x:235, y:20,  w:170, h:50 },
+          { id:'docker',pregunta:'¿Falla solo en Docker?',x:70,  y:140, w:190, h:50, padre:'root', rama:'yes', etiqueta:'sí' },
+          { id:'clave', pregunta:'¿Clave en GitHub?',     x:390, y:140, w:180, h:50, padre:'root', rama:'no',  etiqueta:'no' }
+        ],
+        hojas: [
+          { id:'agente', resultado:'Falta el agente', tipo:'warn', x:6,   y:262, w:150, h:50, padre:'docker', rama:'yes', etiqueta:'sí',
+            descripcion:'Ejecuta ssh-add -l dentro del contenedor para separar dos causas. Si dice "Could not open a connection", falta el reenvío: añade el volumen /run/host-services/ssh-auth.sock Y la variable SSH_AUTH_SOCK=/ssh-agent al servicio php, y recrea el contenedor. Si dice "The agent has no identities", el reenvío funciona pero el agente está vacío: en tu Mac ejecuta ssh-add --apple-use-keychain ~/.ssh/id_ed25519. Ver pasos 3 y 3b.' },
+          { id:'noapi',  resultado:'Falta no-api',     tipo:'warn', x:172, y:262, w:150, h:50, padre:'docker', rama:'no',  etiqueta:'no',
+            descripcion:'El SSH funciona, pero Composer sigue consultando la API de GitHub. Añade "no-api": true al repositorio en composer.json. Ver paso 2 de la instalación.' },
+          { id:'cargar', resultado:'Cárgala en el agente', tipo:'warn', x:338, y:262, w:170, h:50, padre:'clave', rama:'yes', etiqueta:'sí',
+            descripcion:'La clave está registrada pero no disponible. Ejecuta ssh-add --apple-use-keychain ~/.ssh/id_ed25519 y vuelve a verificar con ssh -T git@github.com.' },
+          { id:'registrar', resultado:'Regístrala', tipo:'no', x:524, y:262, w:110, h:50, padre:'clave', rama:'no', etiqueta:'no',
+            descripcion:'Copia tu clave pública con pbcopy < ~/.ssh/id_ed25519.pub y añádela en GitHub → Settings → SSH and GPG keys. Si no tienes clave, genérala primero con ssh-keygen.' }
+        ]
+      };
+      const palette = {
+        internal: { f:'var(--accent-50)',  s:'var(--accent-500)',  t:'var(--accent-700)' },
+        ok:       { f:'var(--success-50)', s:'var(--success-600)', t:'var(--success-600)' },
+        warn:     { f:'var(--warning-50)', s:'var(--warning-600)', t:'var(--warning-600)' },
+        no:       { f:'var(--danger-50)',  s:'var(--danger-600)',  t:'var(--danger-600)' }
+      };
+      const svg = document.getElementById('dt-svg');
+      if (!svg) return;
+      const all = [...tree.nodos, ...tree.hojas];
+      const byId = id => all.find(n => n.id === id);
+      let html = '';
+      all.forEach(n => {
+        if (!n.padre) return;
+        const p = byId(n.padre);
+        const x1 = p.x + p.w/2, y1 = p.y + p.h;
+        const x2 = n.x + n.w/2, y2 = n.y;
+        html += `<path class="dt-edge" data-edge="${n.padre}-${n.rama}" d="M ${x1} ${y1} L ${x2} ${y2}"/>`;
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        html += `<text x="${mx + 8}" y="${my}" font-size="10" fill="var(--ink-500)">${n.etiqueta}</text>`;
+      });
+      all.forEach(n => {
+        const p = n.tipo ? palette[n.tipo] : palette.internal;
+        const label = n.pregunta || n.resultado;
+        html += `<g class="dt-node" data-id="${n.id}" data-leaf="${n.tipo || ''}">
+          <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="${p.f}" stroke="${p.s}" stroke-width="1.5"/>
+          <text x="${n.x + n.w/2}" y="${n.y + n.h/2 + 5}" text-anchor="middle" font-size="12" font-weight="600" fill="${p.t}">${label}</text>
+        </g>`;
+      });
+      svg.innerHTML = html;
+      const path = ['root'];
+      const result = document.getElementById('dt-result');
+      const rt = document.getElementById('dt-rt');
+      const rd = document.getElementById('dt-rd');
+      function reset(){
+        svg.querySelectorAll('.dt-node').forEach(n => n.classList.remove('dim'));
+        svg.querySelectorAll('.dt-edge').forEach(e => e.classList.remove('lit','dim'));
+        path.length = 0; path.push('root');
+        result.className = 'dt-result idle';
+        rt.textContent = 'Empieza por la pregunta de arriba';
+        rd.textContent = 'Las ramas que descartes se atenuarán.';
+      }
+      svg.querySelectorAll('.dt-node').forEach(g => {
+        g.addEventListener('click', () => {
+          if (g.classList.contains('dim')) return;
+          const node = byId(g.dataset.id);
+          if (!node.padre) return;
+          if (!path.includes(node.padre)) return;
+          const otherRama = node.rama === 'yes' ? 'no' : 'yes';
+          const own = svg.querySelector(`[data-edge="${node.padre}-${node.rama}"]`);
+          if (own) own.classList.add('lit');
+          const other = svg.querySelector(`[data-edge="${node.padre}-${otherRama}"]`);
+          if (other) other.classList.add('dim');
+          all.filter(x => x.padre === node.padre && x.id !== node.id).forEach(s => {
+            const el = svg.querySelector(`[data-id="${s.id}"]`);
+            if (el) el.classList.add('dim');
+          });
+          path.push(node.id);
+          if (node.tipo) {
+            result.className = 'dt-result ' + node.tipo;
+            rt.textContent = node.resultado;
+            rd.textContent = node.descripcion;
+          }
+        });
+      });
+      document.getElementById('dt-reset').onclick = reset;
+    })();
+  </script>
+</body>
+</html>

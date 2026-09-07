@@ -872,6 +872,42 @@ $stored = [];</div>
           <p class="lede">El destino se decide con una cadena de respaldo. Las credenciales viven en el entorno; landlord solo guarda nombres de bucket o disco.</p>
         </header>
 
+        <h3>De dónde sale el propósito</h3>
+        <p>El destino <strong>no se decide por módulo</strong>. Se decide por el <em>propósito</em>: una etiqueta que describe <strong>qué ES el archivo</strong>, no quién lo sube. La produce el propio módulo consumidor al declarar el dueño del adjunto.</p>
+
+        <div class="code-box"><span class="cm">// El consumidor declara el dueño — SAT · StoreVoucherAttachmentService</span>
+$owner = AttachmentOwner::for(
+    <span class="val">'vouchers'</span>,   <span class="cm">// módulo</span>
+    <span class="val">'voucher'</span>,    <span class="cm">// entidad</span>
+    $voucherId,   <span class="cm">// id del registro</span>
+    <span class="val">'supports'</span>,   <span class="cm">// ÁMBITO ← esto es lo que decide el destino</span>
+);
+
+<span class="cm">// AttachmentOwner::purpose() — src/Domain/ValueObjects/AttachmentOwner.php:72</span>
+return $this->scope === null
+    ? $this->module                      <span class="cm">// sin ámbito → "vouchers"</span>
+    : $this->module.<span class="val">'.'</span>.$this->scope;   <span class="cm">// con ámbito → "vouchers.supports"</span></div>
+
+        <p>Ese valor es el que viaja al resolvedor. En <code>StoreAttachmentService</code> no hay ningún <code>if</code>, ni nombres de disco, ni menciones a S3 o Synology: solo una pregunta.</p>
+
+        <div class="code-box"><span class="cm">// src/Application/Services/StoreAttachmentService.php:74</span>
+$location = $this-&gt;disks-&gt;locationFor($owner-&gt;purpose());</div>
+
+        <div class="callout"><div class="callout__icon">●</div><div><p class="callout__title">La función que decide es una sola</p><p class="callout__body"><code>LandlordTenantDiskResolver::locationFor()</code> —<code>src/Infrastructure/Tenancy/LandlordTenantDiskResolver.php:51</code>— es el único punto donde se elige el destino. Todo lo demás la alimenta o consume su resultado.</p></div></div>
+
+        <p>Para saber qué propósito usa un módulo, busca su <code>AttachmentOwner::for(...)</code> y aplica la regla <code>módulo.ámbito</code>:</p>
+
+        <div class="table-wrap"><table class="doc-table">
+          <thead><tr><th>Módulo consumidor</th><th>módulo</th><th>ámbito</th><th>Propósito resultante</th></tr></thead>
+          <tbody>
+            <tr><td>Vouchers · soportes (SAT)</td><td><code>vouchers</code></td><td><code>supports</code></td><td><code>vouchers.supports</code></td></tr>
+            <tr><td>Studies · documentos (FINTEGRA)</td><td><code>studies</code></td><td>según categoría</td><td><code>studies.&lt;categoría&gt;</code></td></tr>
+            <tr><td>Un consumidor sin ámbito</td><td><code>modulo</code></td><td><em>ninguno</em></td><td><code>modulo</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="callout callout--warning"><div class="callout__icon">▲</div><div><p class="callout__title">El propósito se escribe entero, no por partes</p><p class="callout__body">El resolvedor solo consulta <strong>dos</strong> claves: el propósito completo y el comodín <code>attachments</code>. Una fila con <code>purpose = 'vouchers'</code> <strong>nunca se encontraría</strong> para un adjunto cuyo propósito es <code>vouchers.supports</code>. La coincidencia es exacta, no por prefijo.</p></div></div>
+
         <h3>Cadena exacta de resolución</h3>
         <figure class="figure">
           <svg viewBox="0 0 760 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cadena de resolución del disco" style="width:100%;height:auto;">
@@ -926,6 +962,68 @@ $stored = [];</div>
   (<span class="val">'&lt;ULID_26&gt;'</span>, <span class="val">&lt;TENANT_ID&gt;</span>, <span class="val">'follow_ups.follow_up'</span>, <span class="val">'sftp'</span>,
    <span class="val">'{"disk":"nas"}'</span>, <span class="val">'1'</span>, now(), now());</div>
         </div>
+
+        <h3>Cómo se traduce la fila a un destino</h3>
+        <p><code>LandlordTenantDiskResolver::toLocation()</code> (línea 126) convierte la fila en una <code>AttachmentLocation</code>. La columna <code>driver</code> dice <strong>con qué</strong> se guarda y el JSON de <code>config</code> dice <strong>dónde</strong>.</p>
+
+        <div class="table-wrap"><table class="doc-table">
+          <thead><tr><th><code>driver</code></th><th><code>config</code></th><th>Ubicación resultante</th><th>Qué se persiste</th></tr></thead>
+          <tbody>
+            <tr><td><code>s3</code></td><td><code>{"bucket":"sat-acme"}</code></td><td><code>s3:sat-acme</code></td><td>El nombre del bucket</td></tr>
+            <tr><td><code>sftp</code></td><td><code>{"disk":"nas"}</code></td><td><code>disk:nas</code></td><td>El nombre del disco</td></tr>
+            <tr><td><code>local</code></td><td><code>{"disk":"public"}</code></td><td><code>local:public</code></td><td>El nombre del disco</td></tr>
+            <tr><td colspan="2"><em>sin fila</em></td><td><code>local:&lt;ATTACHMENTS_DISK&gt;</code></td><td>El disco por defecto</td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="callout callout--warning"><div class="callout__icon">▲</div><div><p class="callout__title"><code>{"disk":"nas"}</code> es una CLAVE, no una configuración</p><p class="callout__body">Ese valor es el nombre con el que se busca el bloque en <code>config/filesystems.php</code>: <code>{"disk":"nas"}</code> → <code>config('filesystems.disks.nas')</code>. Si lo cambias por <code>nas_sodeker</code>, buscará <code>filesystems.disks.nas_sodeker</code>. <strong>La fila nunca contiene host, usuario ni contraseña</strong>: eso vive en la definición del disco, que los lee del entorno. Si la clave no existe, se lanza <code>UnknownAttachmentDiskException</code> al escribir el primer archivo — de forma ruidosa, nunca en silencio.</p></div></div>
+
+        <p><strong>Reglas del nombre.</strong> Se valida con <code>/^[a-z0-9][a-z0-9._-]*$/</code>, pero conviene ser más estricto:</p>
+        <div class="table-wrap"><table class="doc-table">
+          <thead><tr><th>Nombre</th><th>¿Sirve?</th><th>Motivo</th></tr></thead>
+          <tbody>
+            <tr><td><code>nas</code>, <code>nas_sodeker</code></td><td>Sí · recomendado</td><td>Letras, dígitos y guion bajo.</td></tr>
+            <tr><td><code>nas-sodeker</code></td><td>Sí</td><td>Funciona, pero prefiere el guion bajo por coherencia.</td></tr>
+            <tr><td><code>nas.sodeker</code></td><td><strong>No</strong></td><td>Pasa la validación pero rompe la búsqueda: <code>config('filesystems.disks.nas.sodeker')</code> baja dos niveles del árbol y no encuentra nada.</td></tr>
+            <tr><td><code>NAS</code></td><td><strong>No</strong></td><td>Solo minúsculas.</td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="callout"><div class="callout__icon">●</div><div><p class="callout__title">Por qué en depuración verás un disco <code>att_disk_nas</code></p><p class="callout__body">El paquete no usa <code>Storage::disk('nas')</code> directamente. <code>FlysystemAttachmentBlobStorage::filesystem()</code> (línea 179) <strong>lee</strong> la definición de <code>filesystems.disks.nas</code> y la <strong>copia entera</strong> bajo un nombre derivado de la ubicación (<code>att_disk_nas</code>), con el que trabaja. Es deliberado: <code>FilesystemManager</code> cachea las instancias por nombre y es singleton de la aplicación, así que un nombre derivado de la ubicación evita que dos clientes en destinos distintos compartan instancia. No es un error si aparece en un <code>dd()</code>.</p></div></div>
+
+        <h3>Ejemplo · comprobantes al Synology, PUC al disco local</h3>
+        <p>Caso real: que los adjuntos de comprobantes vayan al NAS del cliente y todo lo demás siga en el disco local.</p>
+
+        <div class="sql-box">
+          <div class="sql-box__bar">landlord · una sola fila basta</div>
+          <div class="sql-box__body"><span class="kw">INSERT INTO</span> <span class="tbl">tenant_disks</span>
+  (uuid, tenant_id, purpose, driver, config, status, created_at, updated_at)
+<span class="kw">VALUES</span>
+  (<span class="val">'&lt;ULID_26&gt;'</span>, <span class="val">&lt;TENANT_ID&gt;</span>, <span class="val">'vouchers.supports'</span>, <span class="val">'sftp'</span>,
+   <span class="val">'{"disk":"nas"}'</span>, <span class="val">'1'</span>, now(), now());</div>
+        </div>
+
+        <p><strong>Los adjuntos del PUC no necesitan configuración.</strong> Su propósito será distinto, no encontrará fila propia ni comodín, y caerá en <code>ATTACHMENTS_DISK</code> — el disco local. Si prefieres dejar la decisión explícita en lugar de implícita, añade la fila comodín:</p>
+
+        <div class="sql-box">
+          <div class="sql-box__bar">landlord · comodín explícito (opcional pero recomendado)</div>
+          <div class="sql-box__body"><span class="kw">INSERT INTO</span> <span class="tbl">tenant_disks</span>
+  (uuid, tenant_id, purpose, driver, config, status, created_at, updated_at)
+<span class="kw">VALUES</span>
+  (<span class="val">'&lt;ULID_26&gt;'</span>, <span class="val">&lt;TENANT_ID&gt;</span>, <span class="val">'attachments'</span>, <span class="val">'local'</span>,
+   <span class="val">'{"disk":"public"}'</span>, <span class="val">'1'</span>, now(), now());</div>
+        </div>
+
+        <p>Comprueba el resultado tras subir un adjunto:</p>
+        <div class="sql-box">
+          <div class="sql-box__bar">tenant · verificación</div>
+          <div class="sql-box__body"><span class="kw">SELECT</span> name, storage_location, url <span class="kw">FROM</span> <span class="tbl">sat_attachments</span>
+<span class="kw">ORDER BY</span> id <span class="kw">DESC</span> <span class="kw">LIMIT</span> <span class="val">3</span>;
+<span class="cm">-- storage_location debe decir 'disk:nas'</span>
+<span class="cm">-- y la clave empezar por sat/&lt;tenant&gt;/vouchers/voucher/…</span></div>
+        </div>
+
+        <div class="callout callout--warning"><div class="callout__icon">▲</div><div><p class="callout__title">Solo afecta a lo nuevo, y es por cliente</p><p class="callout__body">Los adjuntos ya subidos guardan su propia <code>storage_location</code> y se seguirán leyendo de donde estén: no hay migración automática. Y la restricción única es <code>(tenant_id, purpose)</code>, así que <strong>hace falta una fila por cada cliente</strong> que deba usar el Synology. Si además cada empresa tiene su propio servidor, se declara un disco por servidor — ver «Varios Synology a la vez».</p></div></div>
 
         <h3>Agregar un nuevo disco declarado</h3>
         <div class="flow">
