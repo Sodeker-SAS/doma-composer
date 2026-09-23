@@ -207,4 +207,78 @@ return [
         'jpeg' => 'jpg',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Declaraciones equivalentes
+    |--------------------------------------------------------------------------
+    |
+    | Extensiones que comparten formato interno con un tipo verificado y pueden
+    | declararse en su lugar SIN que se considere una discrepancia. El archivo se
+    | verifica contra la firma del tipo detectado, pero se guarda con la extensión
+    | declarada.
+    |
+    | POR QUÉ HACE FALTA PARA `xlsm`: un Excel con macros es OOXML igual que un
+    | xlsx —misma firma `PK\x03\x04` y mismo marcador `xl/`—, así que los magic
+    | bytes lo detectan como `xlsx`. Lo que de verdad los separa es la entrada
+    | `xl/vbaProject.bin`, que está demasiado adentro del archivo para verla en los
+    | primeros bytes. Declararlo aquí conserva la verificación de que es un OOXML
+    | válido y a la vez respeta la extensión que el usuario envió.
+    |
+    | NO ES UN ALIAS: `extension_aliases` NORMALIZA (un jpeg se guarda como jpg).
+    | Esto CONSERVA la extensión declarada, que es lo correcto cuando el archivo
+    | realmente es de ese subtipo.
+    |
+    */
+
+    'equivalent_declarations' => [
+        'xlsx' => ['xlsm'],
+        'docx' => ['docm'],
+        'pptx' => ['pptm'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tipos sin firma binaria
+    |--------------------------------------------------------------------------
+    |
+    | Formatos que se aceptan por su extensión porque NO TIENEN una firma contra
+    | la que contrastarlos: son bytes arbitrarios. Un `.log` o un `.txt` pueden
+    | contener cualquier cosa y no hay nada que verificar.
+    |
+    | QUÉ SE PIERDE, y hay que aceptarlo conscientemente: para estos tipos no se
+    | puede detectar un archivo renombrado. Un ejecutable llamado `notas.txt` se
+    | acepta. Por eso la defensa real no es esta lista, sino el camino de lectura:
+    | servirlos siempre como descarga y nunca en línea desde el dominio de la
+    | aplicación.
+    |
+    | Solo se consultan cuando NINGUNA firma encajó, así que un archivo que sí es
+    | un formato conocido nunca llega aquí.
+    |
+    */
+
+    'opaque_types' => [
+        'txt', 'log', 'md', 'csv', 'json', 'xml', 'dump', 'sql', 'yml', 'yaml',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Extensiones bloqueadas · NO SE RELAJAN POR MÓDULO
+    |--------------------------------------------------------------------------
+    |
+    | Se rechazan SIEMPRE, antes de mirar el contenido y sin importar lo que pida
+    | el módulo consumidor. No están aquí por política de negocio sino porque son
+    | peligrosas AL SERVIRSE: si el navegador las interpreta desde el dominio de la
+    | aplicación, el archivo deja de ser un dato y pasa a ser código ejecutándose
+    | con la sesión de quien lo abre.
+    |
+    | Un módulo puede decidir que no quiere imágenes; NO puede decidir que sí
+    | quiere `.html`. Esa es la frontera entre política y seguridad.
+    |
+    */
+
+    'blocked_extensions' => [
+        'svg', 'html', 'htm', 'xhtml', 'shtml',
+        'php', 'phtml', 'phar', 'js', 'mjs', 'jsp', 'asp', 'aspx',
+    ],
+
 ];

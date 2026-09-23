@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Probar el paquete en local — Documentación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./sodeker.css">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('sodeker-docs-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', stored || (prefersDark ? 'dark' : 'light'));
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    .pill {
+      display: inline-block; background: var(--ink-050); border: 1px solid var(--ink-100);
+      color: var(--ink-600); font-family: var(--font-mono); font-size: var(--fs-micro);
+      padding: 2px 8px; border-radius: var(--r-sm);
+    }
+    .pill--accent { background: var(--accent-50); color: var(--accent-700); border-color: var(--accent-100); font-weight: 600; }
+
+    /* Terminal (mac) */
+    .terminal { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--ink-200);
+      box-shadow: var(--shadow-sm); background: #0F172A; margin: var(--space-3) 0; }
+    .terminal__bar { background: #1E293B; padding: var(--space-3) var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
+    .terminal__dots { display: flex; gap: 5px; }
+    .terminal__dots span { width: 11px; height: 11px; border-radius: 50%; background: #64748B; }
+    .terminal__title { font-size: var(--fs-micro); font-weight: 600; color: rgba(255,255,255,.55);
+      letter-spacing: .06em; text-transform: uppercase; margin-left: var(--space-2); font-family: var(--font-mono); }
+    .terminal__body { padding: var(--space-4) var(--space-5); font-family: var(--font-mono);
+      font-size: .78rem; line-height: 1.75; color: #E2E8F0; overflow-x: auto; white-space: pre-wrap; }
+    .terminal__body .t-cmt { color: #64748B; font-style: italic; }
+    .terminal__body .t-prompt { color: #7DD3FC; font-weight: 600; }
+    .terminal__body .t-arg { color: #FCD34D; }
+    .terminal__body .t-flag { color: #C4B5FD; }
+    .terminal__body .t-ok { color: #86EFAC; font-style: italic; }
+    .terminal__body .t-err { color: #FCA5A5; font-style: italic; }
+
+    /* Comandos numerados */
+    .cmd-stack { display: grid; gap: var(--space-4); margin: var(--space-5) 0; }
+    .cmd-item { border: var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--paper); box-shadow: var(--shadow-xs); }
+    .cmd-item__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5);
+      background: var(--paper-tint); border-bottom: 1px solid var(--ink-100); }
+    .cmd-item__num { width: 24px; height: 24px; border-radius: var(--r-pill); background: var(--accent);
+      color: #fff; font-size: var(--fs-micro); font-weight: 700; display: inline-flex; align-items: center;
+      justify-content: center; font-family: var(--font-mono); flex: none; }
+    .cmd-item__title { font-size: var(--fs-small); font-weight: 600; color: var(--ink-900); }
+    .cmd-item__code { background: #0F172A; color: #E2E8F0; padding: var(--space-3) var(--space-5);
+      font-family: var(--font-mono); font-size: .8rem; line-height: 1.6; overflow-x: auto; white-space: pre; }
+    .cmd-item__code .t-arg { color: #FCD34D; }
+    .cmd-item__code .t-flag { color: #C4B5FD; }
+    .cmd-item__code .t-cmt { color: #64748B; font-style: italic; }
+    .cmd-item__foot { padding: var(--space-3) var(--space-5); font-size: var(--fs-small);
+      color: var(--ink-600); border-top: 1px solid var(--ink-100); background: var(--paper-tint); }
+    .cmd-item__foot strong { color: var(--ink-900); }
+
+    /* Antes / después */
+    .ba-wrap { position: relative; width: 100%; aspect-ratio: 640/250; background: var(--ink-050);
+      border: 1px solid var(--ink-200); border-radius: var(--r-md); overflow: hidden; user-select: none; touch-action: none; }
+    .ba-side { position: absolute; inset: 0; }
+    .ba-side svg { width: 100%; height: 100%; }
+    .ba-after { clip-path: inset(0 0 0 50%); }
+    .ba-label { position: absolute; top: 12px; padding: 4px 10px; font-size: 11px; font-weight: 600;
+      border-radius: var(--r-sm); font-family: var(--font-mono); }
+    .ba-label.before { left: 12px; background: var(--ink-050); color: var(--ink-600); border: 1px solid var(--ink-200); }
+    .ba-label.after { right: 12px; background: var(--accent-50); color: var(--accent-700); border: 1px solid var(--accent-100); }
+    .ba-divider { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--paper); left: 50%;
+      transform: translateX(-50%); box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+    .ba-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 38px; height: 38px;
+      background: var(--paper); border-radius: 50%; border: 1px solid var(--ink-300); display: flex;
+      align-items: center; justify-content: center; cursor: ew-resize; color: var(--accent); box-shadow: var(--shadow-sm); }
+  </style>
+</head>
+<body class="with-grid">
+
+  <button class="theme-toggle" type="button" aria-label="Cambiar tema (claro / oscuro)" title="Cambiar tema">
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+    </svg>
+  </button>
+
+  <div class="doc-layout">
+    <main class="doc-content">
+
+      <!-- HERO -->
+      <header class="section" style="border-bottom:none; padding-top: var(--space-8);">
+        <span class="badge">Desarrollo del paquete</span>
+        <h1 class="display" style="margin-top: var(--space-4);">
+          Probar el paquete <span class="accent">en local</span>
+        </h1>
+        <p class="lede">
+          Cómo modificar <code>sodeker/laravel-attachments</code> y comprobarlo dentro de una aplicación
+          real <strong>sin publicar ninguna versión</strong>. El ejemplo es FINTEGRA, pero el
+          procedimiento es idéntico en cualquier proyecto que consuma el paquete.
+        </p>
+
+        <div class="metric-grid">
+          <div class="metric"><div class="metric__value">3</div><div class="metric__label">métodos de prueba</div></div>
+          <div class="metric"><div class="metric__value">5</div><div class="metric__label">pasos de montaje</div></div>
+          <div class="metric"><div class="metric__value">106</div><div class="metric__label">pruebas del paquete</div></div>
+        </div>
+      </header>
+
+      <!-- 1 · EL PROBLEMA -->
+      <section id="problema" class="section">
+        <header class="section__header">
+          <span class="badge">El problema</span>
+          <h2>Por qué no se publica para <span class="accent">probar</span></h2>
+          <p class="lede">
+            El camino evidente —publicar una versión y actualizar el proyecto— funciona, pero cobra un
+            peaje que se acumula.
+          </p>
+        </header>
+
+        <p>
+          Composer instala las dependencias en <code>vendor/</code>, y ese directorio es
+          <strong>territorio suyo</strong>: lo borra y lo reconstruye cuando quiere. Editar ahí no sirve
+          de nada, porque el siguiente <code>composer install</code> se lleva los cambios por delante.
+        </p>
+
+        <div class="card-grid">
+          <article class="card card--accent">
+            <h4 class="card__title">Publicar para probar</h4>
+            <p class="card__body">
+              Cada iteración cuesta un commit, un tag y una descarga. Y deja en el historial versiones
+              que nunca llegaron a validarse, que es justo lo que un historial de versiones no debería
+              contener.
+            </p>
+          </article>
+          <article class="card card--accent">
+            <h4 class="card__title">Editar dentro de <code>vendor/</code></h4>
+            <p class="card__body">
+              Funciona hasta que alguien ejecuta <code>composer install</code> y el cambio desaparece sin
+              dejar rastro. Es el error clásico de quien empieza, y cuesta horas de depuración porque el
+              código «se revirtió solo».
+            </p>
+          </article>
+          <article class="card card--accent">
+            <h4 class="card__title">Enlazar la carpeta de trabajo</h4>
+            <p class="card__body">
+              Que <code>vendor/sodeker/laravel-attachments</code> <strong>no sea una copia sino un
+              enlace</strong> a tu carpeta. Editas en un sitio, el proyecto lo ve al instante. Es lo que
+              hace un <em>path repository</em>.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- 2 · LOS TRES MÉTODOS -->
+      <section id="metodos" class="section">
+        <header class="section__header">
+          <span class="badge">Elegir método</span>
+          <h2>Tres formas, tres <span class="accent">alcances</span></h2>
+          <p class="lede">
+            No todas prueban lo mismo. Empieza siempre por la más barata que responda a tu pregunta.
+          </p>
+        </header>
+
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:22%">Método</th><th>Qué prueba</th><th>Qué NO prueba</th><th>Coste</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Pruebas del paquete</strong></td>
+                <td>La lógica: detección de tipos, rutas, resolución de discos</td>
+                <td>La integración real con la aplicación</td>
+                <td>Nulo · ya funciona</td>
+              </tr>
+              <tr>
+                <td><strong>Path repository</strong></td>
+                <td>Todo el circuito: formulario, subida, guardado, lectura</td>
+                <td>El comportamiento exacto de un despliegue</td>
+                <td>Dos ajustes, una vez</td>
+              </tr>
+              <tr>
+                <td><strong>Tag de prueba</strong></td>
+                <td>El proceso de publicación e instalación tal cual será</td>
+                <td>—</td>
+                <td>Un tag y una descarga por iteración</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <div class="callout__icon">●</div>
+          <div>
+            <p class="callout__title">La recomendación práctica</p>
+            <p class="callout__body">
+              Valida la lógica con <strong>las pruebas del paquete</strong>, que tardan medio segundo.
+              Monta el <strong>path repository</strong> para comprobar el circuito completo. Y reserva el
+              <strong>tag de prueba</strong> —una prerelease como <code>v1.1.0-beta.1</code>— para la
+              verificación final antes de publicar de verdad.
+            </p>
+          </div>
+        </div>
+
+        <h3>Probar un archivo suelto sin montar nada</h3>
+        <p>
+          Útil cuando la duda es «¿este archivo concreto que sube el cliente pasaría?». Se ejecuta en la
+          carpeta del paquete y usa su configuración real:
+        </p>
+
+        <div class="terminal">
+          <div class="terminal__bar">
+            <div class="terminal__dots"><span></span><span></span><span></span></div>
+            <span class="terminal__title">comprobación rápida de un archivo</span>
+          </div>
+          <div class="terminal__body"><span class="t-prompt">$</span> cd modulo-adjuntos
+<span class="t-prompt">$</span> php -r '
+require "vendor/autoload.php";
+use Sodeker\Attachments\Domain\ValueObjects\{AllowedAttachmentTypes, AttachmentContentType, AttachmentBinary};
+$c = require "config/attachments.php";
+$a = AllowedAttachmentTypes::fromMap($c["allowed_types"], $c["extension_aliases"], $c["container_markers"],
+     $c["signature_search_bytes"], $c["equivalent_declarations"], $c["opaque_types"], $c["blocked_extensions"]);
+$f = $argv[1]; $b = AttachmentBinary::fromStream(fopen($f,"rb"), basename($f), filesize($f));
+try { printf("ACEPTADO -> .%s\n", AttachmentContentType::resolve($b,$a)->extension); }
+catch (Throwable $e) { printf("RECHAZADO -> %s\n", $e->getMessage()); }
+' -- <span class="t-arg">/ruta/a/respaldo.sql</span>
+
+<span class="t-ok">ACEPTADO -> .sql</span></div>
+        </div>
+      </section>
+
+      <!-- 3 · EL CONCEPTO (WIDGET) -->
+      <section id="concepto" class="section">
+        <header class="section__header">
+          <span class="badge">El concepto</span>
+          <h2>Copia descargada frente a <span class="accent">enlace vivo</span></h2>
+          <p class="lede">
+            Es la única idea que hay que entender. El resto son dos ajustes de configuración que se
+            derivan de ella.
+          </p>
+        </header>
+
+        <p style="font-size: var(--fs-small); color: var(--ink-500);">
+          <span class="interactive-badge" aria-label="Interactivo">↺</span>
+          Arrastra el divisor de izquierda a derecha para comparar los dos modos.
+        </p>
+
+        <div class="ba-wrap" id="ba-wrap">
+          <div class="ba-side" id="ba-before"></div>
+          <div class="ba-side ba-after" id="ba-after"></div>
+          <span class="ba-label before" id="ba-lbl-before">MODO PRODUCCIÓN</span>
+          <span class="ba-label after" id="ba-lbl-after">MODO DESARROLLO</span>
+          <div class="ba-divider" id="ba-div"></div>
+          <div class="ba-handle" id="ba-handle" aria-label="Arrastra para comparar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/><polyline points="9 18 3 12 9 6"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:-4px;"><polyline points="9 18 15 12 9 6"/><polyline points="15 18 21 12 15 6"/></svg>
+          </div>
+        </div>
+
+        <div class="card-grid" style="margin-top: var(--space-5);">
+          <article class="card card--accent-left">
+            <h4 class="card__title">Modo producción · copia descargada</h4>
+            <p class="card__body">
+              <code>vendor/</code> guarda una copia de la versión publicada. Editar tu carpeta
+              <strong>no cambia nada</strong> en el proyecto: para que lo vea hay que
+              <code>commit → tag → push → composer update</code>.
+            </p>
+          </article>
+          <article class="card card--accent-left">
+            <h4 class="card__title">Modo desarrollo · enlace vivo</h4>
+            <p class="card__body">
+              <code>vendor/</code> es un enlace a tu carpeta de trabajo. Guardas el archivo, recargas y
+              <strong>ya está</strong>: sin commit, sin tag y sin descarga.
+            </p>
+          </article>
+        </div>
+
+        <p style="margin-top: var(--space-4);">
+          En ambos modos la aplicación importa <code>Sodeker\Attachments\…</code> exactamente igual.
+          <strong>El código de FINTEGRA no cambia ni una línea.</strong> Lo único que cambia es a qué
+          apunta <code>vendor/</code>.
+        </p>
+
+        <div class="callout callout--warning">
+          <div class="callout__icon">▲</div>
+          <div>
+            <p class="callout__title">No conviven: es sustitución</p>
+            <p class="callout__body">
+              Al instalar desde el <em>path</em>, Composer <strong>borra la copia</strong> y pone el
+              enlace en su lugar. No hay dos versiones activas ni ambigüedad sobre cuál se está
+              ejecutando. Volver atrás borra el enlace y descarga la copia de nuevo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 · MONTARLO -->
+      <section id="montaje" class="section">
+        <header class="section__header">
+          <span class="badge">Montaje</span>
+          <h2>Cinco pasos en <span class="accent">FINTEGRA</span></h2>
+          <p class="lede">
+            El proyecto está en <code>LOCALES/FINTEGRA</code> y el paquete en
+            <code>LOCALES/modulo-adjuntos</code>: carpetas hermanas.
+          </p>
+        </header>
+
+        <div class="cmd-stack">
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">1</span><span class="cmd-item__title">Declarar el repositorio local en composer.json</span></div>
+            <div class="cmd-item__code"><span class="t-cmt">// FINTEGRA/composer.json — el path va PRIMERO</span>
+"repositories": [
+    { "type": "path", "url": "../modulo-adjuntos", "options": { "symlink": true } },
+    { "type": "vcs",  "url": "git@github.com:Sodeker-SAS/doma-composer.git", "no-api": true }
+]</div>
+            <div class="cmd-item__foot">Composer busca <strong>en orden</strong>. Si <code>../modulo-adjuntos</code> existe, gana; si no —como en el servidor— <strong>lo ignora en silencio</strong> y usa GitHub. Por eso los dos bloques pueden convivir.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">2</span><span class="cmd-item__title">Abrir la ventana al contenedor</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># FINTEGRA/docker-compose.yml</span>
+php:
+    volumes:
+        - ./:/var/www
+        - ../modulo-adjuntos:/var/modulo-adjuntos</div>
+            <div class="cmd-item__foot">El paquete está <strong>fuera</strong> de FINTEGRA, así que el montaje <code>./:/var/www</code> no lo cubre: dentro del contenedor no existiría. <strong>La ruta de destino no es arbitraria</strong> — ver la sección siguiente.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">3</span><span class="cmd-item__title">Recrear el contenedor</span></div>
+            <div class="cmd-item__code">docker compose up <span class="t-flag">-d</span> <span class="t-flag">--force-recreate</span> <span class="t-arg">php</span></div>
+            <div class="cmd-item__foot">Los volúmenes se fijan al crear el contenedor: reiniciarlo no basta, hay que recrearlo.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">4</span><span class="cmd-item__title">Instalar desde el path</span></div>
+            <div class="cmd-item__code">docker compose exec php composer require <span class="t-arg">sodeker/laravel-attachments:@dev</span></div>
+            <div class="cmd-item__foot"><strong><code>@dev</code> es obligatorio.</strong> La restricción del proyecto es <code>^1.0</code> y el paquete local resuelve como <code>dev-main</code> —la rama, no un tag—, que no encaja en ese rango.</div>
+          </div>
+
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">5</span><span class="cmd-item__title">Limpiar cachés</span></div>
+            <div class="cmd-item__code">docker compose exec php php artisan optimize:clear</div>
+            <div class="cmd-item__foot">Con la configuración cacheada seguirías leyendo la anterior y parecería que nada funcionó.</div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="callout__icon">●</div>
+          <div>
+            <p class="callout__title">Si la aplicación publicó <code>config/attachments.php</code></p>
+            <p class="callout__body">
+              FINTEGRA lo tiene publicado. El provider fusiona la configuración <strong>solo en el primer
+              nivel</strong>, así que las claves nuevas que añadas en el paquete <strong>no llegan
+              solas</strong>: hay que copiarlas a mano a la config de la aplicación, o la prueba fallará
+              aunque el enlace funcione. Las aplicaciones que solo usan variables de entorno no tienen
+              este problema.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 · LA ARITMÉTICA DE LA RUTA -->
+      <section id="ruta" class="section">
+        <header class="section__header">
+          <span class="badge">El detalle que falla</span>
+          <h2>Por qué <span class="accent">/var/modulo-adjuntos</span></h2>
+          <p class="lede">
+            La ruta de destino del montaje no se elige: se calcula. Equivocarla deja el enlace colgando y
+            el error es confuso de diagnosticar.
+          </p>
+        </header>
+
+        <p>
+          Composer no crea un enlace absoluto, crea uno <strong>relativo</strong>:
+          <code>../../../modulo-adjuntos</code>. Tres niveles hacia arriba, contados desde la carpeta que
+          contiene el enlace, que es <code>vendor/sodeker/</code>.
+        </p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 680 230" width="100%" role="img" aria-label="Cálculo de la ruta del enlace en el Mac y en el contenedor">
+            <text x="10" y="18" font-size="11" font-weight="700" fill="var(--ink-500)" letter-spacing=".08em">EN TU MAC</text>
+            <rect x="10" y="30" width="270" height="34" rx="6" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="145" y="51" text-anchor="middle" font-size="10" font-family="monospace" fill="var(--ink-700)">…/FINTEGRA/vendor/sodeker/</text>
+            <text x="300" y="51" font-size="11" fill="var(--ink-500)">— 3 niveles →</text>
+            <rect x="400" y="30" width="270" height="34" rx="6" fill="var(--accent-50)" stroke="var(--accent-500)" stroke-width="1.5"/>
+            <text x="535" y="51" text-anchor="middle" font-size="10" font-family="monospace" fill="var(--accent-700)">…/LOCALES/modulo-adjuntos</text>
+
+            <line x1="10" y1="88" x2="670" y2="88" stroke="var(--ink-100)" stroke-dasharray="4 4"/>
+
+            <text x="10" y="112" font-size="11" font-weight="700" fill="var(--ink-500)" letter-spacing=".08em">EN EL CONTENEDOR</text>
+            <rect x="10" y="124" width="270" height="34" rx="6" fill="var(--paper)" stroke="var(--ink-200)"/>
+            <text x="145" y="145" text-anchor="middle" font-size="10" font-family="monospace" fill="var(--ink-700)">/var/www/vendor/sodeker/</text>
+            <text x="300" y="145" font-size="11" fill="var(--ink-500)">— 3 niveles →</text>
+            <rect x="400" y="124" width="270" height="34" rx="6" fill="var(--accent-50)" stroke="var(--accent-500)" stroke-width="1.5"/>
+            <text x="535" y="145" text-anchor="middle" font-size="11" font-weight="700" font-family="monospace" fill="var(--accent-700)">/var/modulo-adjuntos</text>
+
+            <text x="10" y="192" font-size="10" fill="var(--ink-500)">vendor/sodeker → .. vendor → ../.. raíz del proyecto → ../../.. padre de la raíz</text>
+            <text x="10" y="212" font-size="10" fill="var(--ink-500)">La raíz en el contenedor es /var/www, así que su padre es /var — no la raíz del sistema.</text>
+          </svg>
+          <figcaption class="figure__caption">
+            <span class="figure__label">Figura 1</span>
+            La regla general: el destino del montaje es <em>el padre de la raíz del proyecto dentro del
+            contenedor</em>, más el nombre de la carpeta del paquete.
+          </figcaption>
+        </figure>
+
+        <div class="callout callout--danger">
+          <div class="callout__icon">!</div>
+          <div>
+            <p class="callout__title">Montarlo en <code>/modulo-adjuntos</code> es el error fácil</p>
+            <p class="callout__body">
+              Parece razonable y es incorrecto: el enlace buscaría en <code>/var/modulo-adjuntos</code>,
+              que no existiría. Composer falla con un enlace roto y el mensaje no señala la causa. Si
+              tienes dudas con otra estructura de carpetas, <strong>compruébalo con un proyecto
+              desechable</strong> en lugar de razonarlo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 · VERIFICAR -->
+      <section id="verificar" class="section">
+        <header class="section__header">
+          <span class="badge">Verificación</span>
+          <h2>Confirmar que es un <span class="accent">enlace</span></h2>
+          <p class="lede">
+            Es la comprobación que no conviene saltarse: si es una copia, estarías probando código viejo
+            sin saberlo.
+          </p>
+        </header>
+
+        <div class="terminal">
+          <div class="terminal__bar">
+            <div class="terminal__dots"><span></span><span></span><span></span></div>
+            <span class="terminal__title">salida real en laravel_app_fintegra</span>
+          </div>
+          <div class="terminal__body"><span class="t-prompt">$</span> docker exec laravel_app_fintegra ls <span class="t-flag">-la</span> /var/www/vendor/sodeker/
+<span class="t-ok">lrwxr-xr-x  1 root root  25  laravel-attachments -> ../../../modulo-adjuntos/</span>
+
+<span class="t-prompt">$</span> docker exec laravel_app_fintegra readlink <span class="t-flag">-f</span> /var/www/vendor/sodeker/laravel-attachments
+<span class="t-ok">/var/modulo-adjuntos</span>
+
+<span class="t-cmt"># La flecha es la señal. Si ves una carpeta normal (drwxr-xr-x), es una copia.</span></div>
+        </div>
+
+        <h3>Comprobar que el enlace está vivo</h3>
+        <p>
+          Una cosa es que el enlace exista y otra que refleje los cambios. Esta prueba lo zanja: escribe
+          una línea en el paquete desde tu Mac y léela desde dentro del contenedor.
+        </p>
+
+        <div class="terminal">
+          <div class="terminal__bar">
+            <div class="terminal__dots"><span></span><span></span><span></span></div>
+            <span class="terminal__title">prueba del enlace vivo</span>
+          </div>
+          <div class="terminal__body"><span class="t-prompt">$</span> echo <span class="t-arg">"// centinela"</span> &gt;&gt; modulo-adjuntos/README.md
+<span class="t-prompt">$</span> docker exec laravel_app_fintegra tail <span class="t-flag">-1</span> /var/www/vendor/sodeker/laravel-attachments/README.md
+<span class="t-ok">// centinela</span>
+
+<span class="t-cmt"># Si aparece, el enlace funciona en ambos sentidos. Retira el centinela después.</span></div>
+        </div>
+
+        <h3>Probar el comportamiento</h3>
+        <p>
+          Con el enlace confirmado, ya se puede ejercitar la funcionalidad usando la configuración real de
+          la aplicación. Esta es la salida obtenida en FINTEGRA al validar los tipos de archivo:
+        </p>
+
+        <div class="terminal">
+          <div class="terminal__bar">
+            <div class="terminal__dots"><span></span><span></span><span></span></div>
+            <span class="terminal__title">artisan tinker · config publicada de FINTEGRA</span>
+          </div>
+          <div class="terminal__body"><span class="t-ok">respaldo.sql   ACEPTADO  -> .sql</span>
+<span class="t-ok">volcado.dump   ACEPTADO  -> .dump</span>
+<span class="t-ok">datos.json     ACEPTADO  -> .json</span>
+<span class="t-ok">libro.xlsm     ACEPTADO  -> .xlsm</span>
+<span class="t-ok">informe.pdf    ACEPTADO  -> .pdf</span>
+<span class="t-err">mapa.svg       RECHAZADO -> extensión no admitida por seguridad</span>
+<span class="t-err">trampa.txt     RECHAZADO -> se envió como txt pero su contenido es pdf</span></div>
+        </div>
+
+        <div class="callout callout--success">
+          <div class="callout__icon">✓</div>
+          <div>
+            <p class="callout__title">Prueba las dos mitades</p>
+            <p class="callout__body">
+              Que lo nuevo se acepte es la mitad fácil. <strong>Comprueba también que lo que debe
+              rechazarse se rechaza</strong>: un archivo bloqueado y uno renombrado. Una prueba que solo
+              mira el camino feliz no detecta que alguien desactivó una protección sin querer.
+            </p>
+          </div>
+        </div>
+
+        <h3>El ciclo de trabajo, a partir de aquí</h3>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:38%">Qué cambiaste en el paquete</th><th>Qué hay que hacer</th></tr></thead>
+            <tbody>
+              <tr><td>El cuerpo de un método</td><td><strong>Nada.</strong> Se ve al instante</td></tr>
+              <tr><td>Una clase nueva</td><td><code>composer dump-autoload</code></td></tr>
+              <tr><td><code>config/attachments.php</code> del paquete</td><td><code>php artisan config:clear</code> · y copiarla si la app publicó la suya</td></tr>
+              <tr><td>El <code>composer.json</code> del paquete</td><td><code>composer update sodeker/laravel-attachments</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 · VOLVER -->
+      <section id="volver" class="section">
+        <header class="section__header">
+          <span class="badge">Cierre</span>
+          <h2>Volver a modo <span class="accent">producción</span></h2>
+          <p class="lede">
+            El paso que más se olvida, y el único que puede romper un despliegue.
+          </p>
+        </header>
+
+        <div class="callout callout--danger">
+          <div class="callout__icon">!</div>
+          <div>
+            <p class="callout__title">El <code>composer.lock</code> no se commitea en modo desarrollo</p>
+            <p class="callout__body">
+              Mientras el paquete venga del <em>path</em>, el lock registra la dependencia como
+              <code>"type": "path"</code> con <code>"symlink": true</code>. En el servidor,
+              <code>composer install</code> obedece al lock al pie de la letra: intentará enlazar a una
+              carpeta que <strong>solo existe en tu Mac</strong> y el despliegue falla.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th>Archivo</th><th>¿Se commitea?</th><th>Por qué</th></tr></thead>
+            <tbody>
+              <tr><td><code>composer.lock</code></td><td><strong>No</strong>, mientras apunte al path</td><td>Rompe el despliegue</td></tr>
+              <tr><td><code>composer.json</code></td><td>Se puede</td><td>Composer ignora el <em>path</em> si la carpeta no existe</td></tr>
+              <tr><td><code>docker-compose.yml</code></td><td>Se puede</td><td>Un volumen a una carpeta ausente no rompe nada</td></tr>
+              <tr><td><code>config/attachments.php</code></td><td><strong>Sí</strong></td><td>No es de desarrollo: es configuración real de la aplicación</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>La secuencia de cierre</h3>
+        <div class="cmd-stack">
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">1</span><span class="cmd-item__title">Publicar la versión del paquete</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># en modulo-adjuntos</span>
+vendor/bin/pest &amp;&amp; vendor/bin/pint
+git commit <span class="t-flag">-am</span> <span class="t-arg">"…"</span> &amp;&amp; git tag <span class="t-arg">v1.1.0</span>
+git push origin main <span class="t-flag">--tags</span></div>
+            <div class="cmd-item__foot">Pruebas y formato <strong>antes</strong> del tag. Un tag publicado ya no se reescribe.</div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-item__head"><span class="cmd-item__num">2</span><span class="cmd-item__title">Quitar el path y reinstalar desde GitHub</span></div>
+            <div class="cmd-item__code"><span class="t-cmt"># borrar el bloque "path" de repositories, y después:</span>
+docker compose exec php composer require <span class="t-arg">sodeker/laravel-attachments:^1.1</span></div>
+            <div class="cmd-item__foot">Esto borra el enlace, descarga la versión publicada y <strong>regenera el lock limpio</strong>, que ya sí se commitea.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 · SOPORTE -->
+      <section id="soporte" class="section">
+        <header class="section__header">
+          <span class="badge">Soporte</span>
+          <h2>Tropiezos <span class="accent">reales</span></h2>
+          <p class="lede">
+            Los tres que aparecieron al montarlo en FINTEGRA por primera vez, con el mensaje exacto y qué
+            significa cada uno.
+          </p>
+        </header>
+
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th style="width:30%">Qué ves</th><th>Qué pasó</th><th>Qué hacer</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="pill">Permission denied (publickey)</span></td>
+                <td>El contenedor no puede autenticarse con GitHub. Casi siempre porque el agente de credenciales del Mac está vacío: no basta con tener la clave en el disco, hay que cargarla.</td>
+                <td><code>ssh-add --apple-use-keychain ~/.ssh/id_ed25519</code> y comprobar con <code>ssh-add -l</code> <strong>dentro</strong> del contenedor.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">requires PHP extension ext-soap</span></td>
+                <td>La aplicación exige una extensión de PHP que su contenedor no tiene. <strong>No tiene relación con el paquete</strong>: impide cualquier actualización de dependencias.</td>
+                <td>Para salir del paso, <code>--ignore-platform-req=ext-soap</code>. La solución de fondo es añadir la extensión a la imagen.</td>
+              </tr>
+              <tr>
+                <td>Enlace roto en <code>vendor/</code></td>
+                <td>La ruta del montaje no coincide con la que calcula el enlace relativo.</td>
+                <td>Revisar la Figura 1. El destino es el padre de la raíz del proyecto dentro del contenedor.</td>
+              </tr>
+              <tr>
+                <td>Los cambios no aparecen</td>
+                <td>O es una copia y no un enlace, o hay configuración cacheada.</td>
+                <td><code>ls -la vendor/sodeker/</code> para ver la flecha; después <code>php artisan optimize:clear</code>.</td>
+              </tr>
+              <tr>
+                <td>Funciona el enlace pero no el comportamiento</td>
+                <td>La aplicación tiene su <code>config/attachments.php</code> publicado y le faltan las claves nuevas.</td>
+                <td>Copiarlas a mano a la config de la aplicación.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout--warning">
+          <div class="callout__icon">▲</div>
+          <div>
+            <p class="callout__title">Si algo falla, el primer comando es siempre el mismo</p>
+            <p class="callout__body">
+              <code>ssh-add -l</code>. Buena parte de los fallos al instalar desde un repositorio privado
+              se reducen a que la credencial no está disponible, y el mensaje de error rara vez lo dice.
+              Comprobarlo cuesta un segundo y descarta la causa más frecuente.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- REFERENCIAS -->
+      <section id="referencias" class="section">
+        <header class="section__header">
+          <span class="badge">Referencias</span>
+          <h2>Documentos <span class="accent">relacionados</span></h2>
+          <p class="lede">Dentro del repositorio del paquete.</p>
+        </header>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead><tr><th>Archivo</th><th>Para qué</th></tr></thead>
+            <tbody>
+              <tr><td><span class="pill">documentation-instalacion-paquete.html</span></td><td>Instalar el paquete por primera vez: claves SSH, acceso al repositorio y los siete pasos.</td></tr>
+              <tr><td><span class="pill">documentation-modulo-adjuntos.html</span></td><td>Arquitectura, modelo de datos, propósito y destinos de almacenamiento.</td></tr>
+              <tr><td><span class="pill">AGENTS.md</span></td><td>Cómo consumir el módulo desde un módulo de negocio.</td></tr>
+              <tr><td><span class="pill">CHANGELOG.md</span></td><td>Qué cambió en cada versión y qué acción manual exige actualizar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <nav class="doc-nav" aria-label="Navegación de la documentación">
+      <p class="doc-nav__label">Contenido</p>
+      <ul class="doc-nav__list">
+        <li><a href="#problema">El problema</a></li>
+        <li><a href="#metodos">Elegir método</a></li>
+        <li><a href="#concepto">Copia vs enlace</a></li>
+        <li><a href="#montaje">Montaje</a></li>
+        <li><a href="#ruta">La ruta</a></li>
+        <li><a href="#verificar">Verificación</a></li>
+        <li><a href="#volver">Volver a producción</a></li>
+        <li><a href="#soporte">Soporte</a></li>
+        <li><a href="#referencias">Referencias</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <script>
+    (function () {
+      const btn = document.querySelector('.theme-toggle');
+      if (!btn) return;
+      const root = document.documentElement;
+      btn.setAttribute('aria-pressed', root.getAttribute('data-theme') === 'dark');
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        btn.setAttribute('aria-pressed', next === 'dark');
+        try { localStorage.setItem('sodeker-docs-theme', next); } catch (e) {}
+      });
+    })();
+
+    (function () {
+      const links = document.querySelectorAll('.doc-nav__list a[href^="#"]');
+      const targets = Array.from(links).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+      if (!targets.length) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            const id = '#' + e.target.id;
+            links.forEach(l => l.classList.toggle('is-active', l.getAttribute('href') === id));
+          }
+        });
+      }, { rootMargin: '-30% 0px -60% 0px' });
+      targets.forEach(t => obs.observe(t));
+    })();
+
+    // Antes / después — copia descargada vs enlace vivo
+    (function () {
+      const datos = {
+        etiquetaAntes: 'MODO PRODUCCIÓN',
+        etiquetaDespues: 'MODO DESARROLLO',
+        antesSvg: `<svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="65" width="240" height="120" rx="10" fill="var(--paper)" stroke="var(--ink-200)"/>
+          <text x="150" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink-900)">modulo-adjuntos</text>
+          <text x="150" y="131" text-anchor="middle" font-size="11" fill="var(--ink-500)">tu carpeta de trabajo</text>
+          <text x="150" y="155" text-anchor="middle" font-size="11" fill="var(--ink-500)">editas aquí…</text>
+
+          <rect x="370" y="65" width="240" height="120" rx="10" fill="var(--ink-050)" stroke="var(--ink-200)"/>
+          <text x="490" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink-900)">vendor/sodeker/…</text>
+          <text x="490" y="131" text-anchor="middle" font-size="11" fill="var(--ink-500)">copia descargada</text>
+          <text x="490" y="155" text-anchor="middle" font-size="11" font-family="monospace" fill="var(--ink-600)">v1.0.0</text>
+
+          <line x1="280" y1="125" x2="360" y2="125" stroke="var(--ink-300)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <line x1="308" y1="111" x2="332" y2="139" stroke="var(--ink-400)" stroke-width="2"/>
+          <line x1="332" y1="111" x2="308" y2="139" stroke="var(--ink-400)" stroke-width="2"/>
+
+        </svg>`,
+        despuesSvg: `<svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="65" width="240" height="120" rx="10" fill="var(--accent-50)" stroke="var(--accent-500)" stroke-width="1.5"/>
+          <text x="150" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent-700)">modulo-adjuntos</text>
+          <text x="150" y="131" text-anchor="middle" font-size="11" fill="var(--accent-700)">tu carpeta de trabajo</text>
+          <text x="150" y="155" text-anchor="middle" font-size="11" fill="var(--accent-700)">editas aquí…</text>
+
+          <rect x="370" y="65" width="240" height="120" rx="10" fill="var(--paper)" stroke="var(--accent-500)" stroke-width="1.5"/>
+          <text x="490" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent-700)">vendor/sodeker/…</text>
+          <text x="490" y="131" text-anchor="middle" font-size="11" fill="var(--accent-700)">enlace, no copia</text>
+          <text x="490" y="155" text-anchor="middle" font-size="10" font-family="monospace" fill="var(--ink-600)">-&gt; ../../../modulo-adjuntos</text>
+
+          <path d="M 280 125 L 358 125" stroke="var(--accent-500)" stroke-width="2" fill="none" marker-end="url(#flecha-ba)"/>
+          <defs>
+            <marker id="flecha-ba" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-500)"/>
+            </marker>
+          </defs>
+
+        </svg>`,
+      };
+
+      document.getElementById('ba-before').innerHTML = datos.antesSvg;
+      document.getElementById('ba-after').innerHTML = datos.despuesSvg;
+      document.getElementById('ba-lbl-before').textContent = datos.etiquetaAntes;
+      document.getElementById('ba-lbl-after').textContent = datos.etiquetaDespues;
+
+      const wrap = document.getElementById('ba-wrap');
+      const after = document.getElementById('ba-after');
+      const div = document.getElementById('ba-div');
+      const handle = document.getElementById('ba-handle');
+      let dragging = false;
+      function setPos(px) {
+        const r = wrap.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(100, ((px - r.left) / r.width) * 100));
+        after.style.clipPath = `inset(0 0 0 ${pct}%)`;
+        div.style.left = pct + '%';
+        handle.style.left = pct + '%';
+      }
+      handle.addEventListener('pointerdown', e => { dragging = true; handle.setPointerCapture(e.pointerId); });
+      wrap.addEventListener('pointermove', e => { if (dragging) setPos(e.clientX); });
+      wrap.addEventListener('pointerup', () => dragging = false);
+      wrap.addEventListener('click', e => {
+        if (e.target === wrap || e.target.closest('.ba-side')) setPos(e.clientX);
+      });
+    })();
+  </script>
+</body>
+</html>

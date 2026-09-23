@@ -43,7 +43,61 @@ interno y puede cambiar en una versión PARCHE.
 
 ## [Sin publicar]
 
+### Añadido
+
+- **Tipos sin firma binaria (`opaque_types`).** `txt`, `log`, `md`, `csv`, `json`, `xml`, `dump`,
+  `sql`, `yml` y `yaml` se aceptan por su extensión, porque son bytes arbitrarios y no existe una
+  firma contra la que contrastarlos. Solo se consultan cuando **ninguna** firma encajó, así que un
+  archivo que sí es un formato conocido nunca llega por esta vía: un PDF renombrado a `.txt` se
+  sigue detectando y rechazando.
+
+  **Límite aceptado conscientemente:** para estos tipos no se puede detectar un archivo
+  renombrado. La defensa real no es esta lista, sino el camino de lectura.
+
+- **Extensiones bloqueadas (`blocked_extensions`).** `svg`, `html`, `htm`, `xhtml`, `shtml`,
+  `php`, `phtml`, `phar`, `js`, `mjs`, `jsp`, `asp` y `aspx` se rechazan **siempre**, antes de leer
+  un solo byte. No es política de negocio: son peligrosas al servirse, porque si el navegador las
+  interpreta desde el dominio de la aplicación dejan de ser un dato y pasan a ser código con la
+  sesión de quien las abre. **Ningún módulo consumidor puede autorizarlas.**
+
+- **Declaraciones equivalentes (`equivalent_declarations`) y soporte de `xlsm`.** Un Excel con
+  macros es OOXML igual que un `xlsx`: misma firma y mismo marcador `xl/`. Lo que los separa,
+  `xl/vbaProject.bin`, está demasiado adentro del archivo para verlo en los primeros bytes. Esta
+  clave permite declarar `xlsm` frente a un `xlsx` detectado **conservando la extensión
+  declarada**, con lo que se mantiene la verificación de que es un OOXML válido sin perder el
+  subtipo. Se declaran también `docm` y `pptm`.
+
+  No confundir con `extension_aliases`, que **normaliza** (un `jpeg` se guarda como `jpg`).
+
+- 11 pruebas nuevas para las tres categorías. Total: **106**.
+
 ### Cambiado
+
+- **`DerivesAttachmentRules::attachmentFileRules()` acepta `only:`**, para que cada módulo
+  consumidor estreche los formatos según su negocio:
+
+  ```php
+  'attachments.*' => $this->attachmentFileRules(only: ['pdf', 'xlsx', 'xlsm', 'csv']),
+  ```
+
+  **Sin `only:` se aceptan todos** los formatos que la aplicación permita: un consumidor sin
+  opinión sobre formatos no tiene que expresarla, y un formato nuevo en la configuración le llega
+  solo. `only:` **solo puede estrechar**: la intersección se calcula contra lo que la aplicación
+  permite, y las extensiones bloqueadas quedan fuera pase lo que pase. La llamada sin argumentos
+  se comporta igual que antes.
+
+- **La regla de validación pasa de `mimes:` a `extensions:`.** `mimes` valida el MIME adivinado del
+  contenido, y los tipos sin firma —un `.log`, un `.dump`— no tienen un MIME estable que reconozca.
+  El contenido lo sigue verificando el módulo con los magic bytes, que es una comprobación más
+  fuerte. Efecto práctico: un archivo renombrado ahora lo rechaza el módulo con un mensaje preciso,
+  en lugar del validador con uno genérico.
+
+- **Acción al actualizar:** las tres claves nuevas **no llegan solas** a las aplicaciones que
+  publicaron su configuración —FINTEGRA y SUITE la tienen—, por el merge superficial descrito
+  arriba. Hay que copiar a mano `equivalent_declarations`, `opaque_types` y `blocked_extensions`, o
+  volver a publicar la config. Las aplicaciones que solo usan variables de entorno, como SAT, las
+  reciben automáticamente. `allowed_types` **no se renombró** a propósito, para no romper esas
+  configuraciones publicadas en silencio.
 
 - **El paquete ya no publica migraciones.** Se retira `publishesMigrations()` y con él el tag
   `attachments-migrations`. Los dos stubs pasan de `database/migrations/` a `database/schema/`

@@ -132,8 +132,22 @@ final class StoreAttachmentService implements AttachmentStoragePort
         $containerMarkers = (array) config('attachments.container_markers', []);
         /** @var array<string, int> $searchWindows */
         $searchWindows = (array) config('attachments.signature_search_bytes', []);
+        /** @var array<string, list<string>> $equivalents */
+        $equivalents = (array) config('attachments.equivalent_declarations', []);
+        /** @var list<string> $opaque */
+        $opaque = (array) config('attachments.opaque_types', []);
+        /** @var list<string> $blocked */
+        $blocked = (array) config('attachments.blocked_extensions', []);
 
-        return AllowedAttachmentTypes::fromMap($signatures, $aliases, $containerMarkers, $searchWindows);
+        return AllowedAttachmentTypes::fromMap(
+            $signatures,
+            $aliases,
+            $containerMarkers,
+            $searchWindows,
+            $equivalents,
+            $opaque,
+            $blocked,
+        );
     }
 
     private function maxSizeBytes(): int

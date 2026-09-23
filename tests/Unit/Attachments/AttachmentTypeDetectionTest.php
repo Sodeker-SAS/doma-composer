@@ -197,3 +197,93 @@ it('no reconoce nada cuando la firma está vacía', function () {
 it('exige declarar al menos un formato permitido', function () {
     AllowedAttachmentTypes::fromMap([]);
 })->throws(InvalidArgumentException::class);
+
+/*
+| Tipos sin firma, subtipos equivalentes y extensiones bloqueadas.
+|
+| Tres categorías que resuelven el mismo problema desde ángulos distintos: el módulo es genérico
+| y no puede imponer una lista corta de formatos, pero tampoco puede aceptar cualquier cosa sin
+| más. La verificación por contenido se conserva donde es posible; donde no lo es, se acepta por
+| nombre de forma consciente; y lo peligroso de servir se rechaza siempre.
+*/
+
+/** Catálogo con las tres categorías, equivalente al de `config/attachments.php`. */
+function tiposCompletos(): AllowedAttachmentTypes
+{
+    return AllowedAttachmentTypes::fromMap(
+        [
+            'pdf' => '%PDF',
+            'png' => "\x89PNG\r\n\x1A\n",
+            'xlsx' => "PK\x03\x04",
+        ],
+        ['jpeg' => 'jpg'],
+        ['xlsx' => 'xl/'],
+        ['pdf' => 1024],
+        ['xlsx' => ['xlsm']],
+        ['txt', 'log', 'csv'],
+        ['svg', 'html', 'php'],
+    );
+}
+
+it('acepta un tipo sin firma por su nombre, porque no hay nada que verificar', function (string $extension) {
+    $tipo = AttachmentContentType::resolve(
+        AttachmentFixtures::of('cualquier contenido de texto', 'archivo.'.$extension),
+        tiposCompletos(),
+    );
+
+    expect($tipo->extension)->toBe($extension);
+})->with(['txt', 'log', 'csv']);
+
+it('rechaza una extensión desconocida que no es ni verificable ni opaca', function () {
+    AttachmentContentType::resolve(
+        AttachmentFixtures::of('contenido arbitrario', 'archivo.pcx'),
+        tiposCompletos(),
+    );
+})->throws(UnsupportedAttachmentTypeException::class);
+
+it('conserva la extensión declarada cuando es un subtipo equivalente del detectado', function () {
+    // Un Excel con macros es OOXML igual que un xlsx: misma firma y mismo marcador. Guardarlo
+    // como `xlsx` le quitaría el subtipo, así que se respeta lo declarado.
+    $tipo = AttachmentContentType::resolve(
+        AttachmentFixtures::of("PK\x03\x04".str_repeat('x', 40).'xl/workbook.xml', 'libro.xlsm'),
+        tiposCompletos(),
+    );
+
+    expect($tipo->extension)->toBe('xlsm');
+});
+
+it('sigue detectando el tipo base cuando se declara sin subtipo', function () {
+    $tipo = AttachmentContentType::resolve(
+        AttachmentFixtures::of("PK\x03\x04".str_repeat('x', 40).'xl/workbook.xml', 'libro.xlsx'),
+        tiposCompletos(),
+    );
+
+    expect($tipo->extension)->toBe('xlsx');
+});
+
+it('rechaza una extensión bloqueada antes de mirar el contenido', function (string $extension) {
+    // El contenido es un PDF perfectamente válido: da igual. El bloqueo no depende de los bytes,
+    // sino de que el navegador interpretaría ese archivo si llegara a servirse.
+    AttachmentContentType::resolve(
+        AttachmentFixtures::of('%PDF-1.7 contenido real de pdf', 'trampa.'.$extension),
+        tiposCompletos(),
+    );
+})->with(['svg', 'html', 'php'])->throws(UnsupportedAttachmentTypeException::class);
+
+it('no deja que un tipo bloqueado aparezca entre los aceptados', function () {
+    expect(tiposCompletos()->all())
+        ->not->toContain('svg')
+        ->not->toContain('html')
+        ->not->toContain('php')
+        ->toContain('txt')
+        ->toContain('xlsm');
+});
+
+it('un tipo opaco no engaña a la deteccion cuando el contenido sí tiene firma', function () {
+    // Un PDF renombrado a .txt se detecta como pdf y se rechaza por discrepancia: la vía opaca
+    // solo se usa cuando NINGUNA firma encajó.
+    AttachmentContentType::resolve(
+        AttachmentFixtures::of('%PDF-1.7 esto es un pdf de verdad', 'notas.txt'),
+        tiposCompletos(),
+    );
+})->throws(UnsupportedAttachmentTypeException::class);

@@ -44,24 +44,46 @@ final readonly class AttachmentContentType
      */
     public static function resolve(AttachmentBinary $binary, AllowedAttachmentTypes $allowed): self
     {
-        $detected = $allowed->detect($binary->head(self::INSPECTION_BYTES));
         $declared = $allowed->canonical($binary->declaredExtension());
 
-        if ($detected === null) {
-            // Dos fallos que se leen igual pero no lo son. Si el formato declarado está en la
-            // lista, el problema no es el formato sino el contenido, y decirle a quien envió un
-            // PDF que «no se aceptan PDF» lo manda a buscar donde no es.
-            throw $declared !== '' && $allowed->supports($declared)
-                ? UnsupportedAttachmentTypeException::unreadable($binary->originalName, $declared)
-                : UnsupportedAttachmentTypeException::unrecognized($binary->originalName, $allowed->label());
+        // PRIMERO EL BLOQUEO, antes de leer un solo byte. Estas extensiones no se rechazan por
+        // política de negocio sino porque son peligrosas al servirse, así que ningún módulo
+        // consumidor puede autorizarlas y ninguna comprobación de contenido las salva.
+        if ($declared !== '' && $allowed->isBlocked($declared)) {
+            throw UnsupportedAttachmentTypeException::blocked($binary->originalName, $declared);
         }
 
-        // Sin extensión en el nombre nos quedamos con lo que digan los bytes: no hay nada que
-        // contradecir. Con extensión, tiene que coincidir.
-        if ($declared !== '' && $declared !== $detected) {
+        $detected = $allowed->detect($binary->head(self::INSPECTION_BYTES));
+
+        if ($detected !== null) {
+            // Sin extensión en el nombre nos quedamos con lo que digan los bytes: no hay nada que
+            // contradecir. Con extensión, tiene que coincidir —o ser una declaración equivalente,
+            // como un xlsm que por dentro es un xlsx—.
+            if ($declared === '' || $declared === $detected) {
+                return new self($detected);
+            }
+
+            // Se conserva la extensión DECLARADA, no la detectada: un Excel con macros es un
+            // OOXML válido y guardarlo como `xlsx` le quitaría el subtipo que lo identifica.
+            if ($allowed->acceptsDeclarationFor($detected, $declared)) {
+                return new self($declared);
+            }
+
             throw UnsupportedAttachmentTypeException::mismatch($binary->originalName, $declared, $detected);
         }
 
-        return new self($detected);
+        // NINGUNA FIRMA ENCAJÓ. Aquí es donde entran los tipos sin huella: un `.log` o un `.txt`
+        // son bytes arbitrarios y no hay nada contra lo que contrastarlos. Se aceptan por su
+        // nombre, asumiendo conscientemente que un archivo renombrado pasaría.
+        if ($allowed->isOpaque($declared)) {
+            return new self($declared);
+        }
+
+        // Dos fallos que se leen igual pero no lo son. Si el formato declarado está en la
+        // lista, el problema no es el formato sino el contenido, y decirle a quien envió un
+        // PDF que «no se aceptan PDF» lo manda a buscar donde no es.
+        throw $declared !== '' && $allowed->supports($declared)
+            ? UnsupportedAttachmentTypeException::unreadable($binary->originalName, $declared)
+            : UnsupportedAttachmentTypeException::unrecognized($binary->originalName, $allowed->label());
     }
 }

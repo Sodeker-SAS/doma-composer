@@ -25,6 +25,18 @@ final class UnsupportedAttachmentTypeException extends AttachmentException
      * distinto del anterior —el formato no está en discusión, lo que falla es el contenido— y
      * el mensaje debe apuntar a lo único que puede revisar quien envía: el archivo en sí.
      */
+    /**
+     * Extensión de la lista de bloqueo. El mensaje NO enumera lo permitido a propósito: no es un
+     * problema de «elige otro formato de la lista», es que ese formato no se acepta nunca.
+     */
+    public static function blocked(string $fileName, string $declared): self
+    {
+        return new self(
+            "El archivo «{$fileName}» tiene una extensión que no se admite por seguridad "
+            .'('.strtoupper($declared).'), sea cual sea su contenido.'
+        );
+    }
+
     public static function unreadable(string $fileName, string $declared): self
     {
         $formato = strtoupper($declared);
