@@ -69,7 +69,32 @@ interno y puede cambiar en una versión PARCHE.
 
   No confundir con `extension_aliases`, que **normaliza** (un `jpeg` se guarda como `jpg`).
 
-- 11 pruebas nuevas para las tres categorías. Total: **106**.
+- **`DerivesAttachmentRules::attachmentFileMessages()`**, que entrega los textos en español ya
+  asociados a las reglas que emite `attachmentFileRules()`:
+
+  ```php
+  public function messages(): array
+  {
+      return [
+          ...$this->attachmentFileMessages(),
+          'attachments.required' => 'Debe adjuntar al menos un documento',
+      ];
+  }
+  ```
+
+  Acepta el nombre del campo y el mismo `only:` que las reglas, porque el texto enumera los
+  formatos aceptados. Lo que se sobrescriba después del *spread* gana.
+
+  **Por qué se añade:** un mensaje personalizado de Laravel se asocia por el nombre de la regla
+  (`attachments.*.extensions`), así que escribirlo en el FormRequest obligaba al consumidor a
+  conocer un detalle interno de este trait. Al cambiar la regla en esta misma versión, los
+  mensajes de FINTEGRA dejaron de dispararse **sin ningún error** —una clave de mensaje que sobra
+  no falla, simplemente no se usa— y el usuario pasó a ver `validation.extensions` en crudo.
+  Derivándolos aquí, el nombre de la regla vive en un solo sitio.
+
+- 23 pruebas nuevas: 11 para las tres categorías de formato y 12 para el trait, que **no tenía
+  ninguna**. Entre ellas la que habría atrapado el fallo de los mensajes: comprueba que la clave
+  de cada mensaje corresponda a una regla realmente emitida. Total: **118**.
 
 ### Cambiado
 
@@ -92,12 +117,29 @@ interno y puede cambiar en una versión PARCHE.
   fuerte. Efecto práctico: un archivo renombrado ahora lo rechaza el módulo con un mensaje preciso,
   en lugar del validador con uno genérico.
 
-- **Acción al actualizar:** las tres claves nuevas **no llegan solas** a las aplicaciones que
-  publicaron su configuración —FINTEGRA y SUITE la tienen—, por el merge superficial descrito
-  arriba. Hay que copiar a mano `equivalent_declarations`, `opaque_types` y `blocked_extensions`, o
-  volver a publicar la config. Las aplicaciones que solo usan variables de entorno, como SAT, las
-  reciben automáticamente. `allowed_types` **no se renombró** a propósito, para no romper esas
-  configuraciones publicadas en silencio.
+  🔴 **Acción al actualizar, obligatoria en todo FormRequest con mensaje propio de formato.** Un
+  mensaje personalizado se asocia por el nombre de la regla, así que `'attachments.*.mimes'` dejó
+  de dispararse. No produce ningún error: la clave sobrante se ignora y el usuario ve la clave de
+  traducción en crudo (`validation.extensions`). Sustituye el mensaje escrito a mano por el que
+  ahora entrega el trait:
+
+  ```diff
+  - 'attachments.*.max'   => 'Cada archivo no puede superar '.$this->attachmentMaxMegabytes().' MB',
+  - 'attachments.*.mimes' => 'Formato no permitido ('.implode(', ', $this->allowedExtensions()).')',
+  + ...$this->attachmentFileMessages(),
+  ```
+
+  Buscar `attachments.*.mimes` en la aplicación es suficiente para encontrarlos todos. En FINTEGRA
+  eran tres: `StoreStudyDocumentRequest`, `StoreFollowUpRequest` y `StorePolicyVersionRequest`.
+
+- **Acción al actualizar por las tres claves de configuración nuevas: ninguna.**
+  `equivalent_declarations`, `opaque_types` y `blocked_extensions` son claves de **primer nivel**,
+  y esas sí las aporta el paquete a través de `mergeConfigFrom` aunque la aplicación tenga su
+  `config/attachments.php` publicado. Copiarlas a la config de la aplicación es opcional y solo
+  sirve para dejarlas a la vista y poder ajustarlas.
+
+  `allowed_types` **no se renombró** a propósito: ahí el merge superficial sí muerde, porque la
+  aplicación que publicó su config gana con el array entero y no habría visto la clave nueva.
 
 - **El paquete ya no publica migraciones.** Se retira `publishesMigrations()` y con él el tag
   `attachments-migrations`. Los dos stubs pasan de `database/migrations/` a `database/schema/`
