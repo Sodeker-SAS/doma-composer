@@ -299,10 +299,47 @@ public function rules(): array
 {
     return [
         'documents'   => ['required', 'array', 'min:1'],
-        'documents.*' => $this->attachmentFileRules(),
+        'documents.*' => $this->attachmentFileRules(),   // todos los formatos de la aplicación
     ];
 }
 ```
+
+### Restringir los formatos de tu módulo
+
+**Sin argumentos se aceptan todos** los formatos que la aplicación permita. Es el valor por
+defecto a propósito: si tu módulo no tiene una opinión sobre formatos, no tiene que expresarla, y
+un formato nuevo en la configuración le llega solo.
+
+Si tu negocio sí la tiene —un comprobante contable no necesita fotos— **estréchala con `only:`**:
+
+```php
+'documents.*' => $this->attachmentFileRules(
+    only: ['pdf', 'xlsx', 'xlsm', 'csv', 'txt'],
+),
+```
+
+> **`only:` solo puede estrechar, nunca ampliar.** La lista se intersecta con lo que la
+> aplicación permite, y las extensiones de `blocked_extensions` quedan fuera pase lo que pase.
+> Tu módulo puede decidir que no quiere imágenes; **no** puede decidir que sí quiere `.html`.
+
+Es la frontera entre las dos responsabilidades: **la seguridad la garantiza el paquete, la
+política la decides tú.**
+
+### Las tres categorías de formato
+
+| Categoría | Config | Cómo se valida |
+|---|---|---|
+| **Verificados** | `allowed_types` | Se leen los primeros bytes y deben coincidir con la firma |
+| **Sin firma** | `opaque_types` | Se aceptan por extensión: `txt`, `log`, `csv`… no tienen firma que contrastar |
+| **Bloqueados** | `blocked_extensions` | Se rechazan siempre, antes de leer nada |
+
+Un cuarto caso son las **declaraciones equivalentes** (`equivalent_declarations`): un `.xlsm` es
+un OOXML idéntico a un `.xlsx` por dentro, así que se verifica como tal pero **se guarda con la
+extensión declarada**, sin perder el subtipo.
+
+> **La validación del FormRequest es la primera barrera, no la única.** Solo cubre lo que entra
+> por ahí; el módulo vuelve a validar el contenido en `store()`. Si un camino no pasa por un
+> FormRequest —una cola, un import—, la garantía la sigue dando el módulo.
 
 ---
 
@@ -318,7 +355,7 @@ public function rules(): array
 4. **Servicio de lectura** que compruebe la pertenencia en tu pivote (sección 4).
 5. **Servicio de borrado** con baja lógica en ambas tablas (sección 5).
 6. **Controlador** con `UploadedFileAttachmentFactory` y `TranslatesAttachmentErrors`.
-7. **FormRequest** con `DerivesAttachmentRules`.
+7. **FormRequest** con `DerivesAttachmentRules`, usando `only:` si tu negocio restringe formatos.
 8. **Si necesitas un destino propio**, decláralo en `landlord.tenant_disks` con el `purpose` que
    produce tu `AttachmentOwner::purpose()` (`"studies"` o `"studies.<ámbito>"`). No toques
    `config/attachments.php` para eso.

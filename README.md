@@ -54,6 +54,7 @@ La arquitectura, el modelo de datos, los ejemplos de consumo y la operación de 
 | Archivo | Para qué |
 |---|---|
 | [`documentation/documentation-instalacion-paquete.html`](documentation/documentation-instalacion-paquete.html) | **Empieza aquí para instalar.** Proceso completo de claves SSH, acceso al repositorio privado, los 7 pasos de instalación y un árbol de diagnóstico cuando falla. |
+| [`documentation/documentation-pruebas-locales.html`](documentation/documentation-pruebas-locales.html) | Cómo modificar el paquete y probarlo dentro de una aplicación real **sin publicar versiones**: path repository, symlink, montaje en Docker y vuelta a producción. Ejemplo con FINTEGRA. |
 | [`AGENTS.md`](AGENTS.md) | Cómo consumir el módulo desde un módulo de negocio: contratos, los tres flujos con el ejemplo de Estudios, checklist y antipatrones. Escrito para que lo siga un agente de IA. |
 | [`documentation/variables-entorno.md`](documentation/variables-entorno.md) | Las cuatro variables del paquete, qué hace cada una y qué infraestructura espera de la aplicación. Incluye el patrón de varios servidores SFTP. |
 | [`CHANGELOG.md`](CHANGELOG.md) | Qué cambió en cada versión y **qué acción manual exige actualizar**. Léelo antes de cada `composer update`. |
