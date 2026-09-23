@@ -426,3 +426,51 @@ el módulo no gestione visibilidad. El plan de salida está en `config/attachmen
   `documentation/documentation-modulo-adjuntos.html`.
 - Variables de entorno: `documentation/variables-entorno.md`.
 - Qué rompe y qué no al actualizar: `CHANGELOG.md`.
+
+---
+
+## 11. Archivo de sistema: otro contrato, otras reglas
+
+`ArchiveStoragePort` **no es para adjuntos**. Es para archivos que **genera la propia
+aplicación** y se guardan con un nombre que ella decide: hoy, las copias de seguridad de base de
+datos que Suite envía al Synology. No lo uses para lo que sube un usuario, y no uses
+`AttachmentStoragePort` para una copia de seguridad.
+
+| | `AttachmentStoragePort` | `ArchiveStoragePort` |
+|---|---|---|
+| Origen del contenido | Terceros | La propia aplicación |
+| Nombre físico | ULID | La clave que decide quien llama |
+| Destino | Por tenant y propósito (`tenant_disks`) | Un disco fijo: `ATTACHMENTS_ARCHIVE_DISK` |
+| Sin destino configurado | Cae al disco por defecto | Falla |
+| Registro en base de datos | Sí, con `AttachmentRegistryPort` | Ninguno |
+| Tamaño | Máximo `max_size_bytes` | Sin tope, por streaming |
+| Borrado | `delete()` | No existe: lo archivado es permanente |
+
+```php
+public function __construct(
+    private readonly ArchiveStoragePort $archive,
+) {}
+
+// $localPath ya existe; el archivo local sigue siendo de quien llama.
+$archived = $this->archive->store($localPath, 'backups/prevesa/23_09_2026/prevesa_23_09_2026_01_00_03.dump');
+
+Log::channel('database_backups')->info('archivado', [
+    'clave' => $archived->key,
+    'destino' => $archived->destination,
+    'bytes' => $archived->sizeBytes,
+    'sha256' => $archived->sha256,
+    'intentos' => $archived->attempts,
+    'ya_estaba' => $archived->alreadyArchived,
+]);
+```
+
+Errores, con el mismo `isCallerFault()` del resto del módulo:
+
+| Excepción | Significa | ¿Reintentar? |
+|---|---|---|
+| `ArchiveRejectedException` | Clave, tipo, firma o archivo local no válidos, o la clave ya existe con otro contenido | No: corrige el envío |
+| `ArchiveDestinationException` | Destino sin configurar, no declarado, público o que rechaza las credenciales | No: corrige el despliegue. Si recorres varios archivos, **detén la corrida**: seguir con credenciales malas bloquea la IP en el NAS |
+| `ArchiveStorageFailedException` | El transporte falló en todos los intentos | Sí, más tarde: el servicio ya reintentó |
+
+**No persistas `ArchivedFile`.** Todo lo necesario para encontrar el archivo ya está en su clave,
+que es la misma en el origen y en el destino. Va al log, no a una tabla.

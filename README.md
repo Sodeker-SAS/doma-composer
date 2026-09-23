@@ -46,6 +46,7 @@ Los destinos S3 requieren `league/flysystem-aws-s3-v3`; los destinos SFTP o NAS 
 
 - `Sodeker\Attachments\Contracts\AttachmentStoragePort`: guarda, abre, elimina y genera URLs para el contenido físico.
 - `Sodeker\Attachments\Contracts\AttachmentRegistryPort`: registra, consulta y da de baja lógica la ficha del adjunto.
+- `Sodeker\Attachments\Contracts\ArchiveStoragePort`: archiva en un destino externo un archivo que genera la propia aplicación (copias de seguridad de base de datos), con la clave exacta que decide quien llama. Independiente de los adjuntos: sin tenant, sin `tenant_disks`, sin registro en base de datos y sin disco de reserva. Configuración en [`variables-entorno.md`](documentation/variables-entorno.md#4--archivo-de-sistema--archivestorageport).
 
 La arquitectura, el modelo de datos, los ejemplos de consumo y la operación de S3/Synology están en la [guía extensa](documentation/documentation-modulo-adjuntos.html).
 

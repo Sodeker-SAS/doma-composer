@@ -219,3 +219,90 @@ Sodeker\Attachments\Domain\Repositories\ResolvesStorageTenantInterface
 
 El provider del paquete las enlaza con `bindIf` y `scopedIf`, así que si tú ya las registraste, el
 paquete respeta las tuyas y no las sobrescribe.
+
+---
+
+## 4 · Archivo de sistema · `ArchiveStoragePort`
+
+Variables del contrato de archivo de sistema, aparte de las cuatro de los adjuntos. No
+intervienen en los adjuntos de usuario ni en `tenant_disks`.
+
+| Variable | Por defecto | Criticidad |
+|---|---|---|
+| `ATTACHMENTS_ARCHIVE_DISK` | *(ninguno)* | **Obligatoria para archivar** |
+| `ATTACHMENTS_ARCHIVE_ATTEMPTS` | `3` | Ajuste |
+| `ATTACHMENTS_ARCHIVE_RETRY_DELAY` | `10` (segundos) | Ajuste |
+
+### `ATTACHMENTS_ARCHIVE_DISK`
+
+Nombre de un disco declarado en `config/filesystems.php`. **No tiene valor por defecto a
+propósito:** si falta, `store()` falla con `ArchiveDestinationException` antes de escribir un
+byte. Tampoco acepta un disco público —`public`, uno con `visibility => public` o uno local cuya
+raíz esté bajo `public/` o `storage/app/public`—, porque ahí una copia de la base de datos quedaría
+descargable por URL.
+
+Para el Synology, un disco SFTP propio, separado de los NAS de clientes que usan los adjuntos:
+
+```php
+// config/filesystems.php
+'synology_backups' => [
+    'driver'     => 'sftp',
+    'host'       => env('SYNOLOGY_BACKUPS_SFTP_HOST'),
+    'port'       => (int) env('SYNOLOGY_BACKUPS_SFTP_PORT', 22),
+    'username'   => env('SYNOLOGY_BACKUPS_SFTP_USERNAME'),
+    'password'   => env('SYNOLOGY_BACKUPS_SFTP_PASSWORD') ?: null,
+    'privateKey' => env('SYNOLOGY_BACKUPS_SFTP_PRIVATE_KEY') ?: null,
+    'passphrase' => env('SYNOLOGY_BACKUPS_SFTP_PASSPHRASE') ?: null,
+    'root'       => env('SYNOLOGY_BACKUPS_SFTP_ROOT', '/'),
+    'timeout'    => 30,
+    'visibility'           => 'private',   // archivos 0600
+    'directory_visibility' => 'private',   // carpetas 0700
+    'throw'      => true,
+],
+```
+
+`visibility` y `directory_visibility` en `private` dejan cada dump legible solo por el usuario
+SFTP de las copias, no por cualquier cuenta del NAS. Si la carpeta compartida del Synology usa
+permisos ACL de Windows y rechaza el `chmod`, la escritura falla con `UnableToSetVisibility`: en
+ese caso se quitan las dos líneas y el acceso lo gobiernan las ACL de la carpeta.
+
+```dotenv
+ATTACHMENTS_ARCHIVE_DISK=synology_backups
+SYNOLOGY_BACKUPS_SFTP_HOST=
+SYNOLOGY_BACKUPS_SFTP_PORT=22
+SYNOLOGY_BACKUPS_SFTP_USERNAME=
+SYNOLOGY_BACKUPS_SFTP_PASSWORD=
+SYNOLOGY_BACKUPS_SFTP_PRIVATE_KEY=
+SYNOLOGY_BACKUPS_SFTP_PASSPHRASE=
+SYNOLOGY_BACKUPS_SFTP_ROOT=/
+```
+
+Aplican los mismos tres detalles de la sección 2: `?: null` en las credenciales, `throw => true`
+y `root` como identidad. La clave que recibe `store()` es **relativa a `root`**: con
+`root => '/'` y la clave `backups/prevesa/23_09_2026/prevesa_23_09_2026_01_00_03.dump`, el archivo queda
+en `/backups/prevesa/…` del Synology.
+
+Requiere `league/flysystem-sftp-v3` instalado **en la aplicación**.
+
+### `ATTACHMENTS_ARCHIVE_ATTEMPTS` y `ATTACHMENTS_ARCHIVE_RETRY_DELAY`
+
+Intentos de la subida completa y segundos de espera entre uno y otro. Solo se reintenta el
+transporte (red cortada, NAS que no responde): un envío rechazado por clave, tipo o firma falla al
+primer intento, porque repetirlo daría lo mismo.
+
+**Las credenciales rechazadas tampoco se reintentan**, y ahí el motivo es otro: el Synology cuenta
+los inicios de sesión fallidos y, con el «bloqueo automático» activo, bloquea la IP de origen
+pasado un umbral. Con tres intentos por archivo y varios archivos por corrida, una contraseña mal
+configurada dejaría al servidor bloqueado en segundos. Llegan como `ArchiveDestinationException`
+al primer intento. Quien recorra varios archivos en una corrida debería además dejar de intentar
+los siguientes ante esa excepción.
+
+Cada intento empieza desde cero sobre un temporal nuevo (`<clave>.<aleatorio>.part`), y el
+temporal fallido se borra. Si el proceso muere a mitad de la subida puede quedar un `.part`
+huérfano en el destino: nunca tiene el nombre final y puede borrarse sin riesgo.
+
+### Tipos que se archivan
+
+No es variable: es la lista cerrada `archive.types` de `config/attachments.php`, con la firma que
+debe tener cada tipo. Hoy solo `dump` (`PGDMP`, la cabecera de `pg_dump --format=custom`). Un dump
+en texto plano o cortado a la mitad no la tiene y se rechaza antes de subir nada.
