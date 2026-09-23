@@ -304,6 +304,28 @@ public function rules(): array
 }
 ```
 
+### Los mensajes los da el trait, no los escribas a mano
+
+```php
+public function messages(): array
+{
+    return [
+        ...$this->attachmentFileMessages('documents.*'),
+        'documents.required' => 'Debe adjuntar al menos un documento',
+    ];
+}
+```
+
+> **Nunca escribas a mano un mensaje para la regla de formato o de tamaño.** Laravel asocia los
+> mensajes personalizados por el **nombre de la regla**, que es un detalle interno de
+> `attachmentFileRules()`. Si ese nombre cambia, tu mensaje deja de dispararse **sin producir
+> ningún error** —la clave sobrante se ignora en silencio— y el usuario ve la clave de traducción
+> en crudo, tipo `validation.extensions`. Ya pasó una vez, al cambiar la regla de `mimes` a
+> `extensions`.
+
+Lo que pongas **después** del *spread* (`...`) gana, así que puedes sobrescribir cualquiera de los
+tres textos sin perder los otros.
+
 ### Restringir los formatos de tu módulo
 
 **Sin argumentos se aceptan todos** los formatos que la aplicación permita. Es el valor por
@@ -313,9 +335,13 @@ un formato nuevo en la configuración le llega solo.
 Si tu negocio sí la tiene —un comprobante contable no necesita fotos— **estréchala con `only:`**:
 
 ```php
+// rules()
 'documents.*' => $this->attachmentFileRules(
     only: ['pdf', 'xlsx', 'xlsm', 'csv', 'txt'],
 ),
+
+// messages() — el mismo `only:`, porque el texto enumera los formatos aceptados
+...$this->attachmentFileMessages('documents.*', only: ['pdf', 'xlsx', 'xlsm', 'csv', 'txt']),
 ```
 
 > **`only:` solo puede estrechar, nunca ampliar.** La lista se intersecta con lo que la
@@ -376,6 +402,7 @@ extensión declarada**, sin perder el subtipo.
 | Inyectar `StoreAttachmentService` | Inyectar `AttachmentStoragePort` |
 | Recibir `UploadedFile` en el servicio | Convertir a `AttachmentBinary` en el controlador |
 | Reimplementar la validación de tipos | `DerivesAttachmentRules` |
+| Escribir a mano `'documents.*.extensions' => …` | `...$this->attachmentFileMessages('documents.*')` |
 
 ---
 
