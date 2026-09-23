@@ -27,6 +27,12 @@ final readonly class AllowedAttachmentTypes
         private array $aliases,
         private array $containerMarkers,
         private array $searchWindows,
+        /** @var array<string, list<string>> detectado => declaraciones equivalentes aceptadas */
+        private array $equivalents,
+        /** @var list<string> extensiones aceptadas sin verificar el contenido */
+        private array $opaque,
+        /** @var list<string> extensiones rechazadas siempre */
+        private array $blocked,
     ) {}
 
     /**
@@ -40,18 +46,100 @@ final readonly class AllowedAttachmentTypes
         array $aliases = [],
         array $containerMarkers = [],
         array $searchWindows = [],
+        array $equivalents = [],
+        array $opaque = [],
+        array $blocked = [],
     ): self {
-        if ($signatures === []) {
+        if ($signatures === [] && $opaque === []) {
             throw new InvalidArgumentException('Debe declararse al menos un tipo de adjunto permitido.');
         }
 
-        return new self($signatures, $aliases, $containerMarkers, $searchWindows);
+        $normalize = static fn (array $list): array => array_values(array_unique(array_map(
+            static fn ($value): string => strtolower(trim((string) $value)),
+            $list,
+        )));
+
+        return new self(
+            $signatures,
+            $aliases,
+            $containerMarkers,
+            $searchWindows,
+            array_map($normalize, $equivalents),
+            $normalize($opaque),
+            $normalize($blocked),
+        );
+    }
+
+    /**
+     * Extensión rechazada siempre, antes de mirar el contenido.
+     *
+     * NO SE CONSULTA LA LISTA DEL CONSUMIDOR: un módulo puede estrechar lo que acepta, nunca
+     * ampliarlo hacia aquí. Ver la nota de `blocked_extensions` en la configuración.
+     */
+    public function isBlocked(string $extension): bool
+    {
+        return in_array($this->canonical($extension), $this->blocked, true);
+    }
+
+    /** Extensión aceptada por su nombre porque no existe firma contra la que contrastarla. */
+    public function isOpaque(string $extension): bool
+    {
+        $extension = $this->canonical($extension);
+
+        return $extension !== '' && in_array($extension, $this->opaque, true);
+    }
+
+    /**
+     * ¿`$declared` es una forma equivalente de `$detected`?
+     *
+     * Cubre los subtipos que comparten formato interno con un tipo verificado —un xlsm es un
+     * xlsx con macros— y que los magic bytes no pueden separar.
+     */
+    public function acceptsDeclarationFor(string $detected, string $declared): bool
+    {
+        return in_array($this->canonical($declared), $this->equivalents[$detected] ?? [], true);
     }
 
     /** ¿Esta extensión canónica es uno de los formatos que se aceptan? */
     public function supports(string $extension): bool
     {
-        return array_key_exists($this->canonical($extension), $this->signatures);
+        $extension = $this->canonical($extension);
+
+        if (array_key_exists($extension, $this->signatures) || in_array($extension, $this->opaque, true)) {
+            return true;
+        }
+
+        foreach ($this->equivalents as $declarations) {
+            if (in_array($extension, $declarations, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Todas las extensiones que el módulo aceptaría, sin las bloqueadas.
+     *
+     * @return list<string>
+     */
+    public function all(): array
+    {
+        $extensions = [
+            ...array_keys($this->signatures),
+            ...$this->opaque,
+            ...array_merge([], ...array_values($this->equivalents)),
+        ];
+
+        // SE CONSERVA EL ORDEN DE LA CONFIGURACIÓN, no se ordena alfabéticamente: la lista está
+        // curada —los formatos habituales primero— y es la que ve el usuario en el mensaje de
+        // error cuando su archivo no encaja.
+        $extensions = array_values(array_unique(array_map(
+            static fn ($value): string => strtolower((string) $value),
+            $extensions,
+        )));
+
+        return array_values(array_diff($extensions, $this->blocked));
     }
 
     /**
@@ -148,6 +236,6 @@ final readonly class AllowedAttachmentTypes
     /** Lista legible de formatos aceptados, para los mensajes de error del consumidor. */
     public function label(): string
     {
-        return strtoupper(implode(', ', array_keys($this->signatures)));
+        return strtoupper(implode(', ', $this->all()));
     }
 }
