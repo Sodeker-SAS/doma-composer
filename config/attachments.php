@@ -281,4 +281,46 @@ return [
         'php', 'phtml', 'phar', 'js', 'mjs', 'jsp', 'asp', 'aspx',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Archivo de sistema · ArchiveStoragePort
+    |--------------------------------------------------------------------------
+    |
+    | Destino para archivos que GENERA la propia aplicación —copias de seguridad
+    | de base de datos— y que se guardan tal cual, con la clave que decide quien
+    | llama. No comparte nada con los adjuntos de usuario: no pasa por
+    | `tenant_disks`, no registra nada en base de datos, no necesita tenant y NO
+    | TIENE DISCO DE RESERVA.
+    |
+    |  disk                 Disco de `config/filesystems.php`. Sin valor por
+    |                       defecto a propósito: si falta, se falla. Caer en
+    |                       `public` dejaría una base de datos entera descargable
+    |                       por URL, así que un disco público también se rechaza.
+    |
+    |  types                Lista cerrada de extensiones que se archivan, cada una
+    |                       con la firma por la que debe empezar el archivo (null
+    |                       si no tiene). `PGDMP` es la cabecera del formato
+    |                       personalizado de `pg_dump` (`--format=custom`): un
+    |                       dump cortado o un volcado en texto plano no la tiene.
+    |                       Las `blocked_extensions` ganan siempre sobre esta lista.
+    |
+    |  attempts             Intentos de la subida completa. Solo se reintenta el
+    |  retry_delay_seconds  transporte; un envío rechazado no se repite.
+    |
+    | Clave de PRIMER NIVEL: llega sola aunque la aplicación haya publicado su
+    | `config/attachments.php` (ver CHANGELOG, «Config publicada»).
+    |
+    */
+
+    'archive' => [
+        'disk' => env('ATTACHMENTS_ARCHIVE_DISK'),
+
+        'types' => [
+            'dump' => 'PGDMP',
+        ],
+
+        'attempts' => (int) env('ATTACHMENTS_ARCHIVE_ATTEMPTS', 3),
+        'retry_delay_seconds' => (int) env('ATTACHMENTS_ARCHIVE_RETRY_DELAY', 10),
+    ],
+
 ];

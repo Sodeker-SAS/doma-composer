@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace Sodeker\Attachments;
 
 use Illuminate\Support\ServiceProvider;
+use Sodeker\Attachments\Application\Services\ArchiveFileService;
 use Sodeker\Attachments\Application\Services\RegisterAttachmentService;
 use Sodeker\Attachments\Application\Services\StoreAttachmentService;
+use Sodeker\Attachments\Contracts\ArchiveStoragePort;
 use Sodeker\Attachments\Contracts\AttachmentRegistryPort;
 use Sodeker\Attachments\Contracts\AttachmentStoragePort;
+use Sodeker\Attachments\Domain\Repositories\ArchiveBlobStorageInterface;
 use Sodeker\Attachments\Domain\Repositories\AttachmentBlobStorageInterface;
 use Sodeker\Attachments\Domain\Repositories\AttachmentRepositoryInterface;
 use Sodeker\Attachments\Domain\Repositories\ResolvesStorageTenantInterface;
 use Sodeker\Attachments\Domain\Repositories\ResolvesTenantDiskInterface;
 use Sodeker\Attachments\Infrastructure\Database\Repositories\EloquentAttachmentRepository;
+use Sodeker\Attachments\Infrastructure\Storage\FlysystemArchiveBlobStorage;
 use Sodeker\Attachments\Infrastructure\Storage\FlysystemAttachmentBlobStorage;
 use Sodeker\Attachments\Infrastructure\Tenancy\LandlordTenantDiskResolver;
 use Sodeker\Attachments\Infrastructure\Tenancy\TenantConnectionStorageTenantResolver;
@@ -44,6 +48,13 @@ final class AttachmentsServiceProvider extends ServiceProvider
         // escribiendo los adjuntos de un cliente en el disco del anterior. `scoped` se reinicia en
         // cada petición y en cada job, que es justo la vida útil que debe tener ese dato.
         $this->app->scopedIf(ResolvesTenantDiskInterface::class, LandlordTenantDiskResolver::class);
+
+        // Archivo de sistema: archivos que genera la propia aplicación (copias de seguridad de base
+        // de datos) y se guardan con el nombre que decide ella. Camino independiente del de los
+        // adjuntos: sin tenant, sin `tenant_disks`, sin registro en base de datos y sin disco de
+        // reserva. Ver ArchiveStoragePort.
+        $this->app->bind(ArchiveStoragePort::class, ArchiveFileService::class);
+        $this->app->bind(ArchiveBlobStorageInterface::class, FlysystemArchiveBlobStorage::class);
     }
 
     public function boot(): void
