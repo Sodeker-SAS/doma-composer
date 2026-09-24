@@ -41,7 +41,7 @@ interno y puede cambiar en una versión PARCHE.
 
 ---
 
-## [Sin publicar]
+## [1.3.0] - 2026-09-24
 
 ### Añadido
 
