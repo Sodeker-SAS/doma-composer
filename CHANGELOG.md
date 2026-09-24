@@ -45,6 +45,68 @@ interno y puede cambiar en una versión PARCHE.
 
 ### Añadido
 
+- **Archivo de sistema: `ArchiveStoragePort`.** Tercer contrato público, independiente de los
+  adjuntos. Guarda en un destino externo —el Synology por SFTP, un bucket— un archivo que
+  **genera la propia aplicación** (copias de seguridad de base de datos), con la clave exacta que
+  decide quien llama:
+
+  ```php
+  $archived = $archive->store(
+      '/var/www/backups/prevesa/23_09_2026/prevesa_23_09_2026_01_00_03.dump',
+      'backups/prevesa/23_09_2026/prevesa_23_09_2026_01_00_03.dump',
+  );
+  ```
+
+  Lo que lo separa de `AttachmentStoragePort`, y por qué no se reutilizó:
+
+  - **La clave se respeta**, no se sustituye por un ULID: en una copia de seguridad el nombre es
+    la información. Se valida segmento a segmento para que ningún valor salga de la raíz del
+    destino (`..`, rutas absolutas, `\`, archivos ocultos).
+  - **Sin tenant, sin `tenant_disks`, sin registro en base de datos.** El landlord también se
+    puede archivar.
+  - **Sin disco de reserva.** Si `ATTACHMENTS_ARCHIVE_DISK` falta o apunta a un disco no
+    declarado, falla. Un disco público —`public` por nombre, `visibility => public` o raíz local
+    dentro de lo que sirve el servidor web— también se rechaza.
+  - **Sin tope de tamaño y por streaming.** Probado con 96 MB: la memoria no crece con el archivo.
+  - **Subida atómica.** Cada intento escribe `<clave>.<aleatorio>.part`, compara el tamaño remoto
+    con el local y solo entonces renombra. Nunca aparece con su nombre final un archivo a medias.
+  - **No sobrescribe.** La misma subida repetida es inocua (`alreadyArchived`); otro contenido
+    con la misma clave se rechaza.
+  - **Tipos en lista cerrada** (`archive.types`), con la firma que debe tener el archivo: `dump`
+    exige `PGDMP`, la cabecera de `pg_dump --format=custom`. Las `blocked_extensions` ganan
+    siempre.
+  - **Reintenta solo el transporte** (`archive.attempts`, `archive.retry_delay_seconds`). Un
+    envío rechazado no se repite, y unas **credenciales rechazadas tampoco**: el adaptador las
+    distingue y corta al primer intento, porque reintentarlas acerca el bloqueo automático de la
+    IP en el Synology.
+  - **No tiene `delete()`**: lo archivado es permanente.
+
+  Devuelve `ArchivedFile` (clave, destino, tamaño, sha256, intentos) para el log de quien llama.
+
+- 48 pruebas nuevas: la clave, el recorrido real sobre un disco local, un volcado de 96 MB con
+  medición de memoria, los destinos que se rechazan y un destino en memoria que no contesta,
+  rechaza las credenciales, se corta, pierde bytes, no deja renombrar o pierde la respuesta de un
+  renombrado que sí ocurrió. Total: **166**.
+
+- **Verificado además contra un servidor SFTP real** (`atmoz/sftp` haciendo de Synology, con
+  `league/flysystem-sftp-v3`) y dumps reales de `pg_dump`: 52,7 MB en menos de un segundo con
+  6,5 MB de memoria, sha256 idéntico en origen y destino, sin `.part` residuales, archivos `0600`
+  y carpetas `0700` con `visibility => private`. Una contraseña equivocada corta al primer
+  intento con `ArchiveDestinationException`; un NAS apagado agota los tres intentos, y el mensaje
+  lleva la causa real, no solo el envoltorio de Flysystem.
+
+### Acción al actualizar
+
+- **Ninguna obligatoria.** `archive` es una clave de **primer nivel** de `config/attachments.php`,
+  así que llega sola aunque la aplicación haya publicado su config. Los adjuntos no cambian.
+- **Para usar el archivo de sistema:** declarar el disco en `config/filesystems.php`, apuntar
+  `ATTACHMENTS_ARCHIVE_DISK` a él y, si es SFTP, instalar `league/flysystem-sftp-v3` en la
+  aplicación. Ver `documentation/variables-entorno.md`, sección 4.
+
+## [1.2.0] - 2026-09-23
+
+### Añadido
+
 - **Tipos sin firma binaria (`opaque_types`).** `txt`, `log`, `md`, `csv`, `json`, `xml`, `dump`,
   `sql`, `yml` y `yaml` se aceptan por su extensión, porque son bytes arbitrarios y no existe una
   firma contra la que contrastarlos. Solo se consultan cuando **ninguna** firma encajó, así que un
